@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "simple-github-client"
+version = "0.1.0"
+description = "A simple Github client that only provides auth and access to the REST and GraphQL APIs."
+authors = ["Mozilla Release Engineering <release@mozilla.com>"]
+license = "MPL-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.group.test.dependencies]
+coverage = "^7.3.2"
+pytest = "^7.4.2"
+pytest-mock = "^3.11.1"
+responses = "^0.23.3"
+tox = "^4.11.3"
+
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "<7"
+sphinx-autobuild = "^2021.3.14"
+sphinx-book-theme = "^1.0.1"
+
+[tool.black]
+line-length = 88
+
+[tool.pytest.ini_options]
+xfail_strict = true
+
+[tool.coverage.run]
+parallel = true
+branch = true
+source = ["src/simple-github-client/"]
+
+[tool.ruff]
+select = [
+    "E", "W",       # pycodestyle
+    "F",            # pyflakes
+    "I",            # isort
+    "PLC", "PLE",   # pylint
+    "UP",           # pyupgrade
+]
+ignore = [
+    "E501",  # let black handle line-length
+]
+target-version = "py38"
+
+[tool.ruff.isort]
+known-first-party = ["simple-github-client"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
