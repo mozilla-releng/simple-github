@@ -1,3 +1,4 @@
+import base64
 from pathlib import Path
 
 import pytest
@@ -20,3 +21,15 @@ def datadir():
 @pytest.fixture(scope="session")
 def project_root():
     return here.parent
+
+
+@pytest.fixture(scope="session")
+def privkey(datadir):
+    with open(datadir / "test_private_key.pem", "rb") as fh:
+        return fh.read()
+
+
+@pytest.fixture(scope="session")
+def pubkey(datadir):
+    with open(datadir / "test_key.pub", "rb") as fh:
+        return fh.read()

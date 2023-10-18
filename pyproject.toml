@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "simple-github-client"
+name = "simple-github"
 version = "0.1.0"
 description = "A simple Github client that only provides auth and access to the REST and GraphQL APIs."
 authors = ["Mozilla Release Engineering <release@mozilla.com>"]
@@ -8,6 +8,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+gql = "^3.4.1"
+requests = "^2.31.0"
+aiohttp = {extras = ["speedups"], version = "^3.8.6"}
+pyjwt = {extras = ["crypto"], version = "^2.8.0"}
 
 [tool.poetry.group.test.dependencies]
 coverage = "^7.3.2"
@@ -15,7 +19,9 @@ pytest = "^7.4.2"
 pytest-mock = "^3.11.1"
 responses = "^0.23.3"
 tox = "^4.11.3"
-
+aioresponses = "^0.7.4"
+pytest-asyncio = "^0.21.1"
+pytest-aioresponses = "^0.2.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "<7"
@@ -31,7 +37,7 @@ xfail_strict = true
 [tool.coverage.run]
 parallel = true
 branch = true
-source = ["src/simple-github-client/"]
+source = ["src/simple_github/"]
 
 [tool.ruff]
 select = [
@@ -47,7 +53,7 @@ ignore = [
 target-version = "py38"
 
 [tool.ruff.isort]
-known-first-party = ["simple-github-client"]
+known-first-party = ["simple_github"]
 
 [build-system]
 requires = ["poetry-core"]
