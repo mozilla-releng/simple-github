@@ -1,10 +1,11 @@
 import time
+from unittest import mock
 
 import jwt
 import pytest
-from unittest import mock
 
 from simple_github.auth import AppAuth, AppInstallationAuth, TokenAuth
+from simple_github.client import GITHUB_API_ENDPOINT
 
 
 @pytest.mark.asyncio
@@ -45,12 +46,12 @@ async def test_app_installation_auth_get_token(aioresponses, privkey):
     auth = AppInstallationAuth(app=AppAuth(app_id, privkey), owner=owner)
 
     aioresponses.get(
-        "/app/installations",
+        f"{GITHUB_API_ENDPOINT}/app/installations",
         status=200,
         payload=[{"id": inst_id, "account": {"login": owner}}],
     )
     aioresponses.post(
-        f"/app/installations/{inst_id}/access_tokens",
+        f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
         status=200,
         payload={"token": "111"},
     )
@@ -62,7 +63,7 @@ async def test_app_installation_auth_get_token(aioresponses, privkey):
 
     # Unless it will expire in under a minute
     aioresponses.post(
-        f"/app/installations/{inst_id}/access_tokens",
+        f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
         status=200,
         payload={"token": "222"},
     )
