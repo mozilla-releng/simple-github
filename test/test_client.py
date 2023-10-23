@@ -64,6 +64,19 @@ async def test_client_rest(aioresponses, client):
 
 
 @pytest.mark.asyncio
+async def test_client_rest_with_text(aioresponses, client):
+    text = "Favour focus over features"
+    aioresponses.get(
+        f"{GITHUB_API_ENDPOINT}/octocat",
+        content_type="application/octocat-stream",
+        status=200,
+        payload=text,
+    )
+    result = await client.get("/octocat")
+    assert result == text
+
+
+@pytest.mark.asyncio
 async def test_client_graphql(aioresponses, client):
     aioresponses.post(
         GITHUB_GRAPHQL_ENDPOINT, status=200, payload={"data": {"foo": "bar"}}

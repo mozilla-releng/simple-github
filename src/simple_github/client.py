@@ -1,7 +1,7 @@
 import json
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ContentTypeError
 from gql import Client as GqlClient
 from gql import gql
 from gql.client import ReconnectingAsyncClientSession
@@ -77,7 +77,7 @@ class Client:
         assert session.transport.session
         return session.transport.session
 
-    async def _make_request(self, method: str, query: str, **kwargs) -> Dict:
+    async def _make_request(self, method: str, query: str, **kwargs) -> Union[Dict, str]:
         """Make a request to Github's REST API.
 
         Args:
@@ -95,9 +95,12 @@ class Client:
         async with session.request(method, url, **kwargs) as resp:
             if not resp.ok:
                 resp.raise_for_status()
-            return await resp.json()
+            try:
+                return await resp.json()
+            except ContentTypeError:
+                return (await resp.text()).strip('"')
 
-    async def get(self, query: str) -> Dict:
+    async def get(self, query: str) -> Union[Dict, str]:
         """Make a GET request to Github's REST API.
 
         Args:
@@ -108,7 +111,7 @@ class Client:
         """
         return await self._make_request("GET", query)
 
-    async def post(self, query: str, data: Optional[Dict] = None) -> Dict:
+    async def post(self, query: str, data: Optional[Dict] = None) -> Union[Dict, str]:
         """Make a POST request to Github's REST API.
 
         Args:
