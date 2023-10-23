@@ -79,7 +79,7 @@ class Client:
         assert session.transport.session
         return session.transport.session
 
-    async def _make_request(self, method: str, query: str, **kwargs) -> Response:
+    async def request(self, method: str, query: str, **kwargs) -> Response:
         """Make a request to Github's REST API.
 
         Args:
@@ -111,7 +111,7 @@ class Client:
         Returns:
             Dict: The JSON result of the request.
         """
-        return await self._make_request("GET", query)
+        return await self.request("GET", query)
 
     async def post(self, query: str, data: Optional[Dict] = None) -> Response:
         """Make a POST request to Github's REST API.
@@ -123,7 +123,7 @@ class Client:
         Returns:
             Dict: The JSON result of the request.
         """
-        return await self._make_request("POST", query, data=json.dumps(data))
+        return await self.request("POST", query, data=json.dumps(data))
 
     async def execute(self, query: str, variables: Optional[Dict] = None) -> Dict:
         """Execute a query against Github's GraphQL endpoint.
