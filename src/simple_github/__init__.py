@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
-from .client import Client
 from .auth import AppAuth, AppInstallationAuth, TokenAuth
+from .client import Client
 
 
 def AppClient(

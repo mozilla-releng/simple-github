@@ -115,7 +115,7 @@ of a file:
 ```python
 
 query = """
-  query getFileContents { 
+  query getFileContents {
     repository(owner: "mozilla-releng", name: "simple-github") {
       object(expression: "HEAD:README.md") {
         ... on Blob {
