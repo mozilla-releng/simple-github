@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, TypeAlias, Union
 
 from aiohttp import ClientSession, ContentTypeError
 from gql import Client as GqlClient
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 GITHUB_API_ENDPOINT = "https://api.github.com"
 GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 
-type Response = Union[Dict, str]
+Response: TypeAlias = Union[Dict, str]
 
 
 class Client:
