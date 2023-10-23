@@ -9,6 +9,9 @@
 A simple Python Github client that handles auth and provides easy access to the
 REST and GraphQL APIs.
 
+Currently only supports asynchronous environments, but synchronous support will
+be added soon.
+
 ## Why use simple-github?
 
 You might consider simple-github if..
