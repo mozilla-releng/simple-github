@@ -127,8 +127,6 @@ class Client:
         """Execute a query against Github's GraphQL endpoint.
 
         Args:
-            repo (str): The Github repository to execute the query against. Of the
-                form `<owner>/<repository>`.
             query (str): The GraphQL query to execute.
             variables (Dict): The GraphQL variables associated with the query
                 (optional).
