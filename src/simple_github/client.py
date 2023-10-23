@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 GITHUB_API_ENDPOINT = "https://api.github.com"
 GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 
+type Response = Union[Dict, str]
+
 
 class Client:
     def __init__(self, auth: "Auth"):
@@ -77,7 +79,7 @@ class Client:
         assert session.transport.session
         return session.transport.session
 
-    async def _make_request(self, method: str, query: str, **kwargs) -> Union[Dict, str]:
+    async def _make_request(self, method: str, query: str, **kwargs) -> Response:
         """Make a request to Github's REST API.
 
         Args:
@@ -100,7 +102,7 @@ class Client:
             except ContentTypeError:
                 return (await resp.text()).strip('"')
 
-    async def get(self, query: str) -> Union[Dict, str]:
+    async def get(self, query: str) -> Response:
         """Make a GET request to Github's REST API.
 
         Args:
@@ -111,7 +113,7 @@ class Client:
         """
         return await self._make_request("GET", query)
 
-    async def post(self, query: str, data: Optional[Dict] = None) -> Union[Dict, str]:
+    async def post(self, query: str, data: Optional[Dict] = None) -> Response:
         """Make a POST request to Github's REST API.
 
         Args:
