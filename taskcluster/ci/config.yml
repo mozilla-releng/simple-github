@@ -3,10 +3,10 @@ trust-domain: "mozilla"
 task-priority: low
 
 taskgraph:
-  cached-task-prefix: "mozilla.v2.simple-github-client"
+  cached-task-prefix: "mozilla.v2.simple-github"
   repositories:
-    simple-github-client:
-      name: "simple-github-client"
+    simple_github:
+      name: "simple-github"
 
 workers:
   aliases:
