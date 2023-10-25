@@ -17,9 +17,7 @@ def fetch_secret(secret_name):
     return r.json()["secret"]
 
 
-token = fetch_secret("project/releng/mozilla/simple-github-client/build/level-1/ci")[
-    "codecov_api_token"
-]
+token = fetch_secret("project/mozilla/simple-github/level-any/codecov")["token"]
 uploader = FETCHES_DIR / "codecov"
 uploader.chmod(uploader.stat().st_mode | stat.S_IEXEC)
 subprocess.run(
