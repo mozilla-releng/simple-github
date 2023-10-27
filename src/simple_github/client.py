@@ -39,6 +39,7 @@ class Client:
         await self.close()
 
     async def close(self) -> None:
+        await self.auth.close()
         if self._gql_client:
             await self._gql_client.close_async()
 

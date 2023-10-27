@@ -18,6 +18,10 @@ class Auth(ABC):
         """Returns"""
         ...
 
+    async def close(self) -> None:
+        """Close the authentication if necessary."""
+        pass
+
 
 class TokenAuth(Auth):
     def __init__(self, token):
@@ -114,6 +118,10 @@ class AppInstallationAuth(Auth):
         self.repositories = repositories
         self._client = Client(auth=self.app)
         self._generator = self._gen_installation_token()
+
+    async def close(self) -> None:
+        """Close the Client used to fetch the installation token."""
+        await self._client.close()
 
     async def _get_installation_id(self) -> str:
         """Return the app's installation id for owner.
