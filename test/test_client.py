@@ -46,19 +46,29 @@ async def test_client_get_session(client):
 
 @pytest.mark.asyncio
 async def test_client_rest(aioresponses, client):
-    aioresponses.get(
-        f"{GITHUB_API_ENDPOINT}/octocat", status=200, payload={"answer": 42}
-    )
+    url = f"{GITHUB_API_ENDPOINT}/octocat"
+
+    aioresponses.get(url, status=200, payload={"answer": 42})
     result = await client.get("/octocat")
     assert result == {"answer": 42}
 
-    aioresponses.post(
-        f"{GITHUB_API_ENDPOINT}/octocat", status=200, payload={"answer": 42}
-    )
+    aioresponses.post(url, status=200, payload={"answer": 42})
     result = await client.post("/octocat", data={"foo": "bar"})
     assert result == {"answer": 42}
 
-    aioresponses.get(f"{GITHUB_API_ENDPOINT}/octocat", status=401)
+    aioresponses.put(url, status=200, payload={"answer": 42})
+    result = await client.put("/octocat", data={"foo": "bar"})
+    assert result == {"answer": 42}
+
+    aioresponses.patch(url, status=200, payload={"answer": 42})
+    result = await client.patch("/octocat", data={"foo": "bar"})
+    assert result == {"answer": 42}
+
+    aioresponses.delete(url, status=200)
+    result = await client.delete("/octocat")
+    aioresponses.assert_called_with(url, "DELETE", data='null')
+
+    aioresponses.get(url, status=401)
     with pytest.raises(ClientResponseError):
         await client.get("/octocat")
 

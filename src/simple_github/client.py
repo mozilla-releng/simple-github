@@ -126,6 +126,39 @@ class Client:
         """
         return await self.request("POST", query, data=json.dumps(data))
 
+    async def put(self, query: str, data: Optional[Dict] = None) -> Response:
+        """Make a PUT request to Github's REST API.
+
+        Args:
+            query (str): The path segment of the request, e.g `/octocat`.
+            data (Dict): The data to send in the request (optional).
+
+        Returns:
+            Dict: The JSON result of the request.
+        """
+        return await self.request("PUT", query, data=json.dumps(data))
+
+    async def patch(self, query: str, data: Optional[Dict] = None) -> Response:
+        """Make a PATCH request to Github's REST API.
+
+        Args:
+            query (str): The path segment of the request, e.g `/octocat`.
+            data (Dict): The data to send in the request (optional).
+
+        Returns:
+            Dict: The JSON result of the request.
+        """
+        return await self.request("PATCH", query, data=json.dumps(data))
+
+    async def delete(self, query: str, data: Optional[Dict] = None) -> None:
+        """Make a DELETE request to Github's REST API.
+
+        Args:
+            query (str): The path segment of the request, e.g `/octocat`.
+            data (Dict): The data to send in the request (optional).
+        """
+        await self.request("DELETE", query, data=json.dumps(data))
+
     async def execute(self, query: str, variables: Optional[Dict] = None) -> Dict:
         """Execute a query against Github's GraphQL endpoint.
 
