@@ -66,7 +66,7 @@ async def test_client_rest(aioresponses, client):
 
     aioresponses.delete(url, status=200)
     result = await client.delete("/octocat")
-    aioresponses.assert_called_with(url, "DELETE", data='null')
+    aioresponses.assert_called_with(url, "DELETE", data="null")
 
     aioresponses.get(url, status=401)
     with pytest.raises(ClientResponseError):
