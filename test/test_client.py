@@ -2,21 +2,35 @@ import pytest
 import pytest_asyncio
 from aiohttp import ClientResponseError
 from gql import Client as GqlClient
-from gql.client import ReconnectingAsyncClientSession
+from gql.client import ReconnectingAsyncClientSession, SyncClientSession
+from requests.exceptions import HTTPError
 
 from simple_github.auth import TokenAuth
-from simple_github.client import GITHUB_API_ENDPOINT, GITHUB_GRAPHQL_ENDPOINT, Client
+from simple_github.client import (
+    GITHUB_API_ENDPOINT,
+    GITHUB_GRAPHQL_ENDPOINT,
+    AsyncClient,
+    SyncClient,
+)
 
 
 @pytest_asyncio.fixture
-async def client():
-    client = Client(auth=TokenAuth("abc"))
+async def async_client():
+    client = AsyncClient(auth=TokenAuth("abc"))
     yield client
     await client.close()
 
 
+@pytest.fixture
+def sync_client():
+    client = SyncClient(auth=TokenAuth("abc"))
+    yield client
+    client.close()
+
+
 @pytest.mark.asyncio
-async def test_client_get_session(client):
+async def test_async_client_get_session(async_client):
+    client = async_client
     assert client._gql_client is None
     assert client._gql_session is None
 
@@ -44,8 +58,38 @@ async def test_client_get_session(client):
     }
 
 
+def test_sync_client_get_session(sync_client):
+    client = sync_client
+    assert client._gql_client is None
+    assert client._gql_session is None
+
+    session = client._get_requests_session()
+    assert isinstance(client._gql_client, GqlClient)
+    print(client._gql_session)
+    assert isinstance(client._gql_session, SyncClientSession)
+
+    assert client._gql_session.transport.session == session
+    assert dict(client._gql_session.transport.headers) == {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {client.auth._token}",
+    }
+
+    # Calling get_session again returns the same session
+    assert client._get_requests_session() == session
+
+    # Unless the token has changed
+    client.auth._token = "def"
+    new_session = client._get_requests_session()
+    assert new_session != session
+    assert dict(client._gql_session.transport.headers) == {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {client.auth._token}",
+    }
+
+
 @pytest.mark.asyncio
-async def test_client_rest(aioresponses, client):
+async def test_async_client_rest(aioresponses, async_client):
+    client = async_client
     url = f"{GITHUB_API_ENDPOINT}/octocat"
 
     aioresponses.get(url, status=200, payload={"answer": 42})
@@ -73,8 +117,41 @@ async def test_client_rest(aioresponses, client):
         await client.get("/octocat")
 
 
+def test_sync_client_rest(responses, sync_client):
+    client = sync_client
+    url = f"{GITHUB_API_ENDPOINT}/octocat"
+
+    responses.get(url, status=200, json={"answer": 42})
+    result = client.get("/octocat")
+    assert result == {"answer": 42}
+
+    responses.post(url, status=200, json={"answer": 42})
+    result = client.post("/octocat", data={"foo": "bar"})
+    assert result == {"answer": 42}
+
+    responses.put(url, status=200, json={"answer": 42})
+    result = client.put("/octocat", data={"foo": "bar"})
+    assert result == {"answer": 42}
+
+    responses.patch(url, status=200, json={"answer": 42})
+    result = client.patch("/octocat", data={"foo": "bar"})
+    assert result == {"answer": 42}
+
+    responses.delete(url, status=200)
+    result = client.delete("/octocat")
+    resp = responses.calls[-1].response
+    assert resp.url == url
+    assert resp.request.method == "DELETE"
+    assert resp.status_code == 200
+
+    responses.get(url, status=401)
+    with pytest.raises(HTTPError):
+        client.get("/octocat")
+
+
 @pytest.mark.asyncio
-async def test_client_rest_with_text(aioresponses, client):
+async def test_async_client_rest_with_text(aioresponses, async_client):
+    client = async_client
     text = "Favour focus over features"
     aioresponses.get(
         f"{GITHUB_API_ENDPOINT}/octocat",
@@ -86,11 +163,33 @@ async def test_client_rest_with_text(aioresponses, client):
     assert result == text
 
 
+def test_sync_client_rest_with_text(responses, sync_client):
+    client = sync_client
+    text = "Favour focus over features"
+    responses.get(
+        f"{GITHUB_API_ENDPOINT}/octocat",
+        content_type="application/octocat-stream",
+        status=200,
+        json=text,
+    )
+    result = client.get("/octocat")
+    assert result == text
+
+
 @pytest.mark.asyncio
-async def test_client_graphql(aioresponses, client):
+async def test_async_client_graphql(aioresponses, async_client):
+    client = async_client
     aioresponses.post(
         GITHUB_GRAPHQL_ENDPOINT, status=200, payload={"data": {"foo": "bar"}}
     )
     query = "query { viewer { login }}"
     result = await client.execute(query)
+    assert result == {"foo": "bar"}
+
+
+def test_sync_client_graphql(responses, sync_client):
+    client = sync_client
+    responses.post(GITHUB_GRAPHQL_ENDPOINT, status=200, json={"data": {"foo": "bar"}})
+    query = "query { viewer { login }}"
+    result = client.execute(query)
     assert result == {"foo": "bar"}

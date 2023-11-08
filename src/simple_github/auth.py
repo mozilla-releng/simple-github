@@ -4,7 +4,7 @@ from typing import Any, AsyncGenerator, AsyncIterator, List, Optional, Union
 
 import jwt
 
-from simple_github.client import Client
+from simple_github.client import AsyncClient
 
 
 # For compatibility with Python <3.10.
@@ -116,7 +116,7 @@ class AppInstallationAuth(Auth):
         self.app = app
         self.owner = owner
         self.repositories = repositories
-        self._client = Client(auth=self.app)
+        self._client = AsyncClient(auth=self.app)
         self._generator = self._gen_installation_token()
 
     async def close(self) -> None:

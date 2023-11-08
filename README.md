@@ -9,9 +9,6 @@
 A simple Python Github client that handles auth and provides easy access to the
 REST and GraphQL APIs.
 
-Currently only supports asynchronous environments, but synchronous support will
-be added soon.
-
 ## Why use simple-github?
 
 You might consider simple-github if..
@@ -47,6 +44,16 @@ from simple_github import TokenClient
 token = "<access token>"
 async with TokenClient(token) as session:
     await session.get("/octocat")
+```
+
+If calling synchronously, simply remove the `async` / `await` from the
+examples:
+
+```python
+from simple_github import TokenClient
+token = "<access token>"
+with TokenClient(token) as session:
+    session.get("/octocat")
 ```
 
 ### Authenticate as a Github App installation

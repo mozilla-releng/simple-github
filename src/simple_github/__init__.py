@@ -1,7 +1,8 @@
+import asyncio
 from typing import List, Optional, Union
 
 from .auth import AppAuth, AppInstallationAuth, TokenAuth
-from .client import Client
+from .client import AsyncClient, Client, SyncClient
 
 
 def AppClient(
@@ -30,10 +31,16 @@ def AppClient(
     Returns:
         Client: A client authenticated as the app.
     """
+    try:
+        asyncio.get_running_loop()
+        is_async = True
+    except RuntimeError:
+        is_async = False
+
     auth = AppAuth(id, privkey)
     if owner:
         auth = AppInstallationAuth(auth, owner, repositories=repositories)
-    return Client(auth=auth)
+    return AsyncClient(auth=auth) if is_async else SyncClient(auth=auth)
 
 
 def TokenClient(token: str) -> Client:
@@ -45,4 +52,11 @@ def TokenClient(token: str) -> Client:
 
     Returns:
         Client: A client authenticated with the token."""
-    return Client(auth=TokenAuth(token))
+    try:
+        asyncio.get_running_loop()
+        is_async = True
+    except RuntimeError:
+        is_async = False
+
+    auth = TokenAuth(token)
+    return AsyncClient(auth=auth) if is_async else SyncClient(auth=auth)
