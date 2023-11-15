@@ -1,6 +1,6 @@
 import time
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, List, Optional, Union
+from typing import Any, AsyncGenerator, AsyncIterator, List, Optional, Union
 
 import jwt
 
@@ -8,7 +8,7 @@ from simple_github.client import Client
 
 
 # For compatibility with Python <3.10.
-async def anext(ait):
+async def anext(ait: AsyncIterator[Any]):
     return await ait.__anext__()
 
 
@@ -24,7 +24,7 @@ class Auth(ABC):
 
 
 class TokenAuth(Auth):
-    def __init__(self, token):
+    def __init__(self, token: str):
         """Authentication for an access token.
 
         Args:
@@ -42,7 +42,7 @@ class TokenAuth(Auth):
 
 
 class AppAuth(Auth):
-    def __init__(self, app_id, privkey):
+    def __init__(self, app_id: int, privkey: str):
         """Authentication for a Github app.
 
         Args:
@@ -130,6 +130,7 @@ class AppInstallationAuth(Auth):
             str: The app's installation id.
         """
         installations = await self._client.get("/app/installations")
+        assert isinstance(installations, list)
 
         for installation in installations:
             if installation["account"]["login"] == self.owner:
@@ -162,8 +163,10 @@ class AppInstallationAuth(Auth):
             # Ensures the token is only valid for the current repo.
             data["repositories"] = self.repositories
 
-        async def _gentoken():
-            return (await self._client.post(query, data=data))["token"]
+        async def _gentoken() -> str:
+            result = await self._client.post(query, data=data)
+            assert isinstance(result, dict)
+            return result["token"]
 
         token = await _gentoken()
         exp = int(time.time()) + 3600  # tokens are valid for one hour

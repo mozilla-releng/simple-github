@@ -32,6 +32,10 @@ sphinx-book-theme = "^1.0.1"
 [tool.poetry.group.taskgraph.dependencies]
 taskcluster-taskgraph = "^6.3.1"
 
+
+[tool.poetry.group.type.dependencies]
+pyright = "^1.1.336"
+
 [tool.black]
 line-length = 88
 
@@ -50,6 +54,7 @@ select = [
     "I",            # isort
     "PLC", "PLE",   # pylint
     "UP",           # pyupgrade
+    "TCH",          # flake8-type-checking
 ]
 ignore = [
     "E501",  # let black handle line-length
@@ -58,6 +63,10 @@ target-version = "py38"
 
 [tool.ruff.isort]
 known-first-party = ["simple_github"]
+
+[tool.pyright]
+include = ["src/simple_github"]
+reportUnknownParameterType = "error"
 
 [build-system]
 requires = ["poetry-core"]
