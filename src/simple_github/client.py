@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from aiohttp import ClientSession, ContentTypeError
 from gql import Client as GqlClient
@@ -13,7 +13,8 @@ if TYPE_CHECKING:
 GITHUB_API_ENDPOINT = "https://api.github.com"
 GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 
-Response = Union[Dict, str]
+Response = Union[Dict[str, Any], List[Any], str]
+RequestData = Optional[Dict[str, Any]]
 
 
 class Client:
@@ -35,7 +36,7 @@ class Client:
     async def __aenter__(self):
         return self
 
-    async def __aexit__(self, *excinfo):
+    async def __aexit__(self, *excinfo: Any):
         await self.close()
 
     async def close(self) -> None:
@@ -80,7 +81,7 @@ class Client:
         assert session.transport.session
         return session.transport.session
 
-    async def request(self, method: str, query: str, **kwargs) -> Response:
+    async def request(self, method: str, query: str, **kwargs: Any) -> Response:
         """Make a request to Github's REST API.
 
         Args:
@@ -114,7 +115,7 @@ class Client:
         """
         return await self.request("GET", query)
 
-    async def post(self, query: str, data: Optional[Dict] = None) -> Response:
+    async def post(self, query: str, data: RequestData = None) -> Response:
         """Make a POST request to Github's REST API.
 
         Args:
@@ -126,7 +127,7 @@ class Client:
         """
         return await self.request("POST", query, data=json.dumps(data))
 
-    async def put(self, query: str, data: Optional[Dict] = None) -> Response:
+    async def put(self, query: str, data: RequestData = None) -> Response:
         """Make a PUT request to Github's REST API.
 
         Args:
@@ -138,7 +139,7 @@ class Client:
         """
         return await self.request("PUT", query, data=json.dumps(data))
 
-    async def patch(self, query: str, data: Optional[Dict] = None) -> Response:
+    async def patch(self, query: str, data: RequestData = None) -> Response:
         """Make a PATCH request to Github's REST API.
 
         Args:
@@ -150,7 +151,7 @@ class Client:
         """
         return await self.request("PATCH", query, data=json.dumps(data))
 
-    async def delete(self, query: str, data: Optional[Dict] = None) -> None:
+    async def delete(self, query: str, data: RequestData = None) -> None:
         """Make a DELETE request to Github's REST API.
 
         Args:
@@ -159,7 +160,9 @@ class Client:
         """
         await self.request("DELETE", query, data=json.dumps(data))
 
-    async def execute(self, query: str, variables: Optional[Dict] = None) -> Dict:
+    async def execute(
+        self, query: str, variables: RequestData = None
+    ) -> Dict[str, Any]:
         """Execute a query against Github's GraphQL endpoint.
 
         Args:
