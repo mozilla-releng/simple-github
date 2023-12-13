@@ -16,11 +16,13 @@ source /builds/worker/.bashrc
 pyenv --version
 git -C "$(pyenv root)" rev-parse HEAD
 
+versions=()
 for i in ${1//,/ }
 do
-    version=$(pyenv latest --known $i)
-    pyenv install $version
+    versions+="$(pyenv latest --known $i) "
 done
+echo "${versions[@]}" | xargs -P $(nproc) pyenv install
+
 chmod 777 /builds/worker/.pyenv/shims
 pyenv rehash
 pyenv global ${1//,/ }
