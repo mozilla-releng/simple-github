@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "simple-github"
-version = "0.2.0"
+version = "1.0.0"
 description = "A simple Github client that only provides auth and access to the REST and GraphQL APIs."
 authors = ["Mozilla Release Engineering <release@mozilla.com>"]
 license = "MPL-2.0"
