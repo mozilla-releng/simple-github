@@ -1,7 +1,7 @@
 import asyncio
 import json
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Coroutine, Dict, List, Optional, Union
 
 from aiohttp import ClientSession, ContentTypeError
 from gql import Client as GqlClient
@@ -20,6 +20,11 @@ GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 
 Response = Union[Dict[str, Any], List[Any], str]
 RequestData = Optional[Dict[str, Any]]
+
+# Implementations of the base class can be either sync or async.
+BaseDict = Union[Dict[str, Any], Coroutine[None, None, Dict[str, Any]]]
+BaseNone = Union[None, Coroutine[None, None, None]]
+BaseResponse = Union[Response, Coroutine[None, None, Response]]
 
 
 class Client:
@@ -41,35 +46,35 @@ class Client:
         ] = None
 
     @abstractmethod
-    def close(self) -> None:
+    def close(self) -> BaseNone:
         ...
 
     @abstractmethod
-    def request(self, method: str, query: str, **kwargs: Any) -> Response:
+    def request(self, method: str, query: str, **kwargs: Any) -> BaseResponse:
         ...
 
     @abstractmethod
-    def get(self, query: str) -> Response:
+    def get(self, query: str) -> BaseResponse:
         ...
 
     @abstractmethod
-    def post(self, query: str, data: RequestData = None) -> Response:
+    def post(self, query: str, data: RequestData = None) -> BaseResponse:
         ...
 
     @abstractmethod
-    def put(self, query: str, data: RequestData = None) -> Response:
+    def put(self, query: str, data: RequestData = None) -> BaseResponse:
         ...
 
     @abstractmethod
-    def patch(self, query: str, data: RequestData = None) -> Response:
+    def patch(self, query: str, data: RequestData = None) -> BaseResponse:
         ...
 
     @abstractmethod
-    def delete(self, query: str, data: RequestData = None) -> None:
+    def delete(self, query: str, data: RequestData = None) -> BaseNone:
         ...
 
     @abstractmethod
-    def execute(self, query: str, variables: RequestData = None) -> Dict[str, Any]:
+    def execute(self, query: str, variables: RequestData = None) -> BaseDict:
         ...
 
 
