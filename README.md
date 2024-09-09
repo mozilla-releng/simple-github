@@ -43,8 +43,13 @@ In the simplest case, you can provide an access token to use:
 from simple_github import TokenClient
 token = "<access token>"
 async with TokenClient(token) as session:
-    await session.get("/octocat")
+    resp = await session.get("/octocat")
+    resp.raise_for_status()
+    data = await resp.json()
+    await resp.close()
 ```
+
+The return value is an [aiohttp.ClientResponse][0] object.
 
 If calling synchronously, simply remove the `async` / `await` from the
 examples:
@@ -53,8 +58,15 @@ examples:
 from simple_github import TokenClient
 token = "<access token>"
 with TokenClient(token) as session:
-    session.get("/octocat")
+    resp = session.get("/octocat")
+    resp.raise_for_status()
+    data = resp.json()
 ```
+
+In this case the return value is a [requests.Response][1] object.
+
+[0]: https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientResponse
+[1]: https://requests.readthedocs.io/en/latest/api/#requests.Response
 
 ### Authenticate as a Github App installation
 
@@ -73,14 +85,14 @@ privkey = "<private key>"
 owner = "mozilla-releng"
 
 async with AppClient(app_id, privkey, owner=owner) as session:
-    await session.get("/octocat")
+    resp = await session.get("/octocat")
 ```
 
 You can also specify repositories if you want to restrict access.
 
 ```python
 async with AppClient(app_id, privkey, owner=owner, repositories=["simple-github"]) as session:
-    await session.get("/octocat")
+    resp = await session.get("/octocat")
 ```
 
 ### Authenticate as a Github App
@@ -90,7 +102,7 @@ administering the app. To do this, simply omit the `owner` argument.
 
 ```python
 async with AppClient(app_id, privkey) as session:
-    await session.get("/octocat")
+    resp = await session.get("/octocat")
 ```
 
 ### Query the REST API
@@ -101,7 +113,9 @@ query it by passing in the path fragment to `session.get` or `session.post`.
 For example, you can list pull requests with a `GET` request:
 
 ```python
-pulls = await session.get("/repos/mozilla-releng/simple-github/pulls")
+resp = await session.get("/repos/mozilla-releng/simple-github/pulls")
+pulls = await resp.json()
+await resp.close()
 open_pulls = [p for p in pulls if p["state"] == "open"]
 ```
 

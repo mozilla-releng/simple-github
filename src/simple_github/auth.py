@@ -129,7 +129,9 @@ class AppInstallationAuth(Auth):
         Returns:
             str: The app's installation id.
         """
-        installations = await self._client.get("/app/installations")
+        async with await self._client.get("/app/installations") as response:
+            response.raise_for_status()
+            installations = await response.json()
         assert isinstance(installations, list)
 
         for installation in installations:
@@ -164,7 +166,9 @@ class AppInstallationAuth(Auth):
             data["repositories"] = self.repositories
 
         async def _gentoken() -> str:
-            result = await self._client.post(query, data=data)
+            response = await self._client.post(query, data=data)
+            response.raise_for_status()
+            result = await response.json()
             assert isinstance(result, dict)
             return result["token"]
 
