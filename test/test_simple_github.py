@@ -11,7 +11,8 @@ async def test_token_client(aioresponses):
     )
 
     async with TokenClient("abc") as client:
-        result = await client.get("/octocat")
+        resp = await client.get("/octocat")
+        result = await resp.json()
         assert result == {"foo": "bar"}
 
 
@@ -22,7 +23,8 @@ async def test_app_client(aioresponses, privkey):
     )
 
     async with AppClient(id=123, privkey=privkey) as client:
-        result = await client.get("/octocat")
+        resp = await client.get("/octocat")
+        result = await resp.json()
         assert result == {"foo": "bar"}
 
 
@@ -46,5 +48,6 @@ async def test_app_installation_client(aioresponses, privkey):
     )
 
     async with AppClient(id=123, privkey=privkey, owner=owner) as client:
-        result = await client.get("/octocat")
+        resp = await client.get("/octocat")
+        result = await resp.json()
         assert result == {"foo": "bar"}

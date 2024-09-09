@@ -93,28 +93,33 @@ async def test_async_client_rest(aioresponses, async_client):
     url = f"{GITHUB_API_ENDPOINT}/octocat"
 
     aioresponses.get(url, status=200, payload={"answer": 42})
-    result = await client.get("/octocat")
+    resp = await client.get("/octocat")
+    result = await resp.json()
     assert result == {"answer": 42}
 
     aioresponses.post(url, status=200, payload={"answer": 42})
-    result = await client.post("/octocat", data={"foo": "bar"})
+    resp = await client.post("/octocat", data={"foo": "bar"})
+    result = await resp.json()
     assert result == {"answer": 42}
 
     aioresponses.put(url, status=200, payload={"answer": 42})
-    result = await client.put("/octocat", data={"foo": "bar"})
+    resp = await client.put("/octocat", data={"foo": "bar"})
+    result = await resp.json()
     assert result == {"answer": 42}
 
     aioresponses.patch(url, status=200, payload={"answer": 42})
-    result = await client.patch("/octocat", data={"foo": "bar"})
+    resp = await client.patch("/octocat", data={"foo": "bar"})
+    result = await resp.json()
     assert result == {"answer": 42}
 
     aioresponses.delete(url, status=200)
-    result = await client.delete("/octocat")
+    await client.delete("/octocat")
     aioresponses.assert_called_with(url, "DELETE", data="null")
 
     aioresponses.get(url, status=401)
     with pytest.raises(ClientResponseError):
-        await client.get("/octocat")
+        resp = await client.get("/octocat")
+        resp.raise_for_status()
 
 
 def test_sync_client_rest(responses, sync_client):
@@ -122,23 +127,27 @@ def test_sync_client_rest(responses, sync_client):
     url = f"{GITHUB_API_ENDPOINT}/octocat"
 
     responses.get(url, status=200, json={"answer": 42})
-    result = client.get("/octocat")
+    resp = client.get("/octocat")
+    result = resp.json()
     assert result == {"answer": 42}
 
     responses.post(url, status=200, json={"answer": 42})
-    result = client.post("/octocat", data={"foo": "bar"})
+    resp = client.post("/octocat", data={"foo": "bar"})
+    result = resp.json()
     assert result == {"answer": 42}
 
     responses.put(url, status=200, json={"answer": 42})
-    result = client.put("/octocat", data={"foo": "bar"})
+    resp = client.put("/octocat", data={"foo": "bar"})
+    result = resp.json()
     assert result == {"answer": 42}
 
     responses.patch(url, status=200, json={"answer": 42})
-    result = client.patch("/octocat", data={"foo": "bar"})
+    resp = client.patch("/octocat", data={"foo": "bar"})
+    result = resp.json()
     assert result == {"answer": 42}
 
     responses.delete(url, status=200)
-    result = client.delete("/octocat")
+    client.delete("/octocat")
     resp = responses.calls[-1].response
     assert resp.url == url
     assert resp.request.method == "DELETE"
@@ -146,7 +155,8 @@ def test_sync_client_rest(responses, sync_client):
 
     responses.get(url, status=401)
     with pytest.raises(HTTPError):
-        client.get("/octocat")
+        resp = client.get("/octocat")
+        resp.raise_for_status()
 
 
 @pytest.mark.asyncio
@@ -159,7 +169,8 @@ async def test_async_client_rest_with_text(aioresponses, async_client):
         status=200,
         payload=text,
     )
-    result = await client.get("/octocat")
+    resp = await client.get("/octocat")
+    result = (await resp.text()).strip('"')
     assert result == text
 
 
@@ -172,7 +183,8 @@ def test_sync_client_rest_with_text(responses, sync_client):
         status=200,
         json=text,
     )
-    result = client.get("/octocat")
+    resp = client.get("/octocat")
+    result = resp.json()
     assert result == text
 
 

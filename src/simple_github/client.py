@@ -1,16 +1,16 @@
 import asyncio
 import json
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Coroutine, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Coroutine, Dict, Optional, Union
 
-from aiohttp import ClientSession, ContentTypeError
+from aiohttp import ClientResponse, ClientSession
 from gql import Client as GqlClient
 from gql import gql
 from gql.client import ReconnectingAsyncClientSession, SyncClientSession
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.requests import RequestsHTTPTransport
+from requests import Response as RequestsResponse
 from requests import Session
-from requests.exceptions import JSONDecodeError
 
 if TYPE_CHECKING:
     from simple_github.auth import Auth
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 GITHUB_API_ENDPOINT = "https://api.github.com"
 GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 
-Response = Union[Dict[str, Any], List[Any], str]
+Response = Union[RequestsResponse, ClientResponse]
 RequestData = Optional[Dict[str, Any]]
 
 # Implementations of the base class can be either sync or async.
@@ -120,7 +120,7 @@ class SyncClient(Client):
         assert session.transport.session
         return session.transport.session
 
-    def request(self, method: str, query: str, **kwargs) -> Response:
+    def request(self, method: str, query: str, **kwargs) -> RequestsResponse:
         """Make a request to Github's REST API.
 
         Args:
@@ -136,14 +136,9 @@ class SyncClient(Client):
         session = self._get_requests_session()
 
         with session.request(method, url, **kwargs) as resp:
-            if not resp.ok:
-                resp.raise_for_status()
-            try:
-                return resp.json()
-            except JSONDecodeError:
-                return resp.text.strip('"')
+            return resp
 
-    def get(self, query: str) -> Response:
+    def get(self, query: str) -> RequestsResponse:
         """Make a GET request to Github's REST API.
 
         Args:
@@ -154,7 +149,7 @@ class SyncClient(Client):
         """
         return self.request("GET", query)
 
-    def post(self, query: str, data: RequestData = None) -> Response:
+    def post(self, query: str, data: RequestData = None) -> RequestsResponse:
         """Make a POST request to Github's REST API.
 
         Args:
@@ -166,7 +161,7 @@ class SyncClient(Client):
         """
         return self.request("POST", query, data=json.dumps(data))
 
-    def put(self, query: str, data: RequestData = None) -> Response:
+    def put(self, query: str, data: RequestData = None) -> RequestsResponse:
         """Make a PUT request to Github's REST API.
 
         Args:
@@ -178,7 +173,7 @@ class SyncClient(Client):
         """
         return self.request("PUT", query, data=json.dumps(data))
 
-    def patch(self, query: str, data: RequestData = None) -> Response:
+    def patch(self, query: str, data: RequestData = None) -> RequestsResponse:
         """Make a PATCH request to Github's REST API.
 
         Args:
@@ -263,7 +258,7 @@ class AsyncClient(Client):
         assert session.transport.session
         return session.transport.session
 
-    async def request(self, method: str, query: str, **kwargs: Any) -> Response:
+    async def request(self, method: str, query: str, **kwargs: Any) -> ClientResponse:
         """Make a request to Github's REST API.
 
         Args:
@@ -277,16 +272,9 @@ class AsyncClient(Client):
         """
         url = f"{GITHUB_API_ENDPOINT}/{query.lstrip('/')}"
         session = await self._get_aiohttp_session()
+        return await session.request(method, url, **kwargs)
 
-        async with session.request(method, url, **kwargs) as resp:
-            if not resp.ok:
-                resp.raise_for_status()
-            try:
-                return await resp.json()
-            except ContentTypeError:
-                return (await resp.text()).strip('"')
-
-    async def get(self, query: str) -> Response:
+    async def get(self, query: str) -> ClientResponse:
         """Make a GET request to Github's REST API.
 
         Args:
@@ -297,7 +285,7 @@ class AsyncClient(Client):
         """
         return await self.request("GET", query)
 
-    async def post(self, query: str, data: RequestData = None) -> Response:
+    async def post(self, query: str, data: RequestData = None) -> ClientResponse:
         """Make a POST request to Github's REST API.
 
         Args:
@@ -309,7 +297,7 @@ class AsyncClient(Client):
         """
         return await self.request("POST", query, data=json.dumps(data))
 
-    async def put(self, query: str, data: RequestData = None) -> Response:
+    async def put(self, query: str, data: RequestData = None) -> ClientResponse:
         """Make a PUT request to Github's REST API.
 
         Args:
@@ -321,7 +309,7 @@ class AsyncClient(Client):
         """
         return await self.request("PUT", query, data=json.dumps(data))
 
-    async def patch(self, query: str, data: RequestData = None) -> Response:
+    async def patch(self, query: str, data: RequestData = None) -> ClientResponse:
         """Make a PATCH request to Github's REST API.
 
         Args:
