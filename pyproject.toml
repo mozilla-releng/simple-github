@@ -1,40 +1,46 @@
-[tool.poetry]
+[project]
 name = "simple-github"
-version = "1.0.0"
 description = "A simple Github client that only provides auth and access to the REST and GraphQL APIs."
-authors = ["Mozilla Release Engineering <release@mozilla.com>"]
+version = "1.0.0"
+authors = [
+  { name = "Mozilla Release Engineering", email =  "release+simple-github@mozilla.com"}
+]
 license = "MPL-2.0"
 readme = "README.md"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development",
+]
+requires-python = ">=3.8"
+dependencies = [
+  "aiohttp[speedups]~=3.8",
+  "gql[aiohttp,requests]~=3.4",
+  "pyjwt[crypto]~=2.8",
+  "requests~=2.31",
+]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-gql = {extras = ["aiohttp", "requests"], version = "^3.4.1"}
-requests = "^2.31.0"
-aiohttp = {extras = ["speedups"], version = "^3.8.6"}
-pyjwt = {extras = ["crypto"], version = "^2.8.0"}
-
-[tool.poetry.group.test.dependencies]
-coverage = "^7.3.2"
-pytest = "^7.4.2"
-pytest-mock = "^3.11.1"
-responses = "^0.23.3"
-tox = "^4.11.3"
-aioresponses = "^0.7.4"
-pytest-asyncio = "^0.21.1"
-pytest-aioresponses = "^0.2.0"
-pytest-responses = "^0.5.1"
-
-[tool.poetry.group.docs.dependencies]
-sphinx = "<7"
-sphinx-autobuild = "^2021.3.14"
-sphinx-book-theme = "^1.0.1"
-
-
-[tool.poetry.group.taskgraph.dependencies]
-taskcluster-taskgraph = "^7.0.0"
-
-[tool.poetry.group.type.dependencies]
-pyright = "^1.1.336"
+[tool.uv]
+dev-dependencies = [
+  "aioresponses~=0.7",
+  "coverage~=7.3",
+  "pytest~=7.4",
+  "pytest-aioresponses~=0.2",
+  "pytest-asyncio~=0.21",
+  "pytest-mock~=3.11",
+  "pytest-responses~=0.5",
+  "pyright~=1.1",
+  "responses~=0.23",
+  "sphinx<7",
+  "sphinx-autobuild",
+  "sphinx-book-theme~=1.0",
+  "tox~=4.11",
+]
 
 [tool.black]
 line-length = 88
@@ -69,5 +75,5 @@ include = ["src/simple_github"]
 reportUnknownParameterType = "error"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
