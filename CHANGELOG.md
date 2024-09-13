@@ -1,3 +1,9 @@
+## 2.0.0 (2024-09-13)
+
+### Feat
+
+- make `client.request` return response object rather than content
+
 ## 1.0.0 (2023-12-13)
 
 ### Feat
