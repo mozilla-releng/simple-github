@@ -42,6 +42,11 @@ dev-dependencies = [
   "tox~=4.11",
 ]
 
+[tool.commitizen]
+bump_message = "chore: version bump $new_version"
+changelog_incremental = true
+version_provider = "pep621"
+
 [tool.black]
 line-length = 88
 
