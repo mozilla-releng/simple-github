@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Optional, Union
 
-from .auth import AppAuth, AppInstallationAuth, TokenAuth
+from .auth import AppAuth, AppInstallationAuth, PublicAuth, TokenAuth
 from .client import AsyncClient, Client, SyncClient
 
 
@@ -59,4 +59,19 @@ def TokenClient(token: str) -> Client:
         is_async = False
 
     auth = TokenAuth(token)
+    return AsyncClient(auth=auth) if is_async else SyncClient(auth=auth)
+
+
+def PublicClient() -> Client:
+    """Convenience function to create an unauthenticated `Client` instance.
+
+    Returns:
+        Client: A client without any authentication."""
+    try:
+        asyncio.get_running_loop()
+        is_async = True
+    except RuntimeError:
+        is_async = False
+
+    auth = PublicAuth()
     return AsyncClient(auth=auth) if is_async else SyncClient(auth=auth)

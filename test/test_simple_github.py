@@ -1,7 +1,19 @@
 import pytest
 
-from simple_github import AppClient, TokenClient
+from simple_github import AppClient, PublicClient, TokenClient
 from simple_github.client import GITHUB_API_ENDPOINT
+
+
+@pytest.mark.asyncio
+async def test_public_client(aioresponses):
+    aioresponses.get(
+        f"{GITHUB_API_ENDPOINT}/octocat", status=200, payload={"foo": "bar"}
+    )
+
+    async with PublicClient() as client:
+        resp = await client.get("/octocat")
+        result = await resp.json()
+        assert result == {"foo": "bar"}
 
 
 @pytest.mark.asyncio

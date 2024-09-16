@@ -23,6 +23,13 @@ class Auth(ABC):
         pass
 
 
+class PublicAuth(Auth):
+    """Shim for unauthenticated API access."""
+
+    async def get_token(self) -> str:
+        return ""
+
+
 class TokenAuth(Auth):
     def __init__(self, token: str):
         """Authentication for an access token.

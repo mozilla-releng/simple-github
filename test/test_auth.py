@@ -4,8 +4,14 @@ from unittest import mock
 import jwt
 import pytest
 
-from simple_github.auth import AppAuth, AppInstallationAuth, TokenAuth
+from simple_github.auth import AppAuth, AppInstallationAuth, PublicAuth, TokenAuth
 from simple_github.client import GITHUB_API_ENDPOINT
+
+
+@pytest.mark.asyncio
+async def test_public_auth_get_token():
+    auth = PublicAuth()
+    assert await auth.get_token() == ""
 
 
 @pytest.mark.asyncio
