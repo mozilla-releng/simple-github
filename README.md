@@ -105,6 +105,19 @@ async with AppClient(app_id, privkey) as session:
     resp = await session.get("/octocat")
 ```
 
+### No Authentication
+
+Finally you can create a client without any authentication. This is mainly
+provided for cases where supplying an authentication method is optional, e.g to
+increase rate limits. This allows for simpler implementations.
+
+```python
+from simple_github import PublicClient
+
+async with PublicClient() as session:
+    resp = await session.get("/octocat")
+```
+
 ### Query the REST API
 
 simple-github provides only a very basic wrapper around Github's REST API. You can

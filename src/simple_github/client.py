@@ -104,8 +104,10 @@ class SyncClient(Client):
 
         headers = {
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
         }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
         transport = RequestsHTTPTransport(url=GITHUB_GRAPHQL_ENDPOINT, headers=headers)
         self._gql_client = GqlClient(
             transport=transport, fetch_schema_from_transport=False
@@ -242,8 +244,10 @@ class AsyncClient(Client):
 
         headers = {
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
         }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
         transport = AIOHTTPTransport(url=GITHUB_GRAPHQL_ENDPOINT, headers=headers)
         self._gql_client = GqlClient(
             transport=transport, fetch_schema_from_transport=False

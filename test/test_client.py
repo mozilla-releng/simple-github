@@ -58,6 +58,16 @@ async def test_async_client_get_session(async_client):
     }
 
 
+@pytest.mark.asyncio
+async def test_async_client_get_session_no_token(async_client):
+    client = async_client
+    client.auth._token = ""
+    session = await client._get_aiohttp_session()
+    assert dict(session._default_headers) == {
+        "Accept": "application/vnd.github+json",
+    }
+
+
 def test_sync_client_get_session(sync_client):
     client = sync_client
     assert client._gql_client is None
@@ -84,6 +94,15 @@ def test_sync_client_get_session(sync_client):
     assert dict(client._gql_session.transport.headers) == {
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {client.auth._token}",
+    }
+
+
+def test_sync_client_get_session_no_token(sync_client):
+    client = sync_client
+    client.auth._token = ""
+    client._get_requests_session()
+    assert dict(client._gql_session.transport.headers) == {
+        "Accept": "application/vnd.github+json",
     }
 
 
