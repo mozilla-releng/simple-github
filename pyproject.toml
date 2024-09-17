@@ -45,6 +45,9 @@ dev-dependencies = [
 [tool.commitizen]
 bump_message = "chore: version bump $new_version"
 changelog_incremental = true
+gpg_sign = true
+tag_format = "$version"
+update_changelog_on_bump = true
 version_provider = "pep621"
 
 [tool.black]

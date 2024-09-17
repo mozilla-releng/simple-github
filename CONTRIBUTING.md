@@ -89,13 +89,12 @@ uv tool install commitizen
 Then create the version bump commit:
 
 ```
-cz changelog
 cz bump
 git show
 ```
 
-Create a pull request and get the commit merged into `main`. Once merged, make sure
-your tag is pushed upstream:
+Verify the commit is what you expect, then create a pull request and get the
+commit merged into `main`. Once merged, push your tag upstream:
 
 ```
 git push upstream --tags
