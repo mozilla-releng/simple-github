@@ -1,3 +1,9 @@
+## 2.1.0 (2024-09-17)
+
+### Feat
+
+- support unauthenticated access to the Github API
+
 ## 2.0.0 (2024-09-13)
 
 ### Feat
