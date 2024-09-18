@@ -53,19 +53,27 @@ class Client:
     def request(self, method: str, query: str, **kwargs: Any) -> BaseResponse: ...
 
     @abstractmethod
-    def get(self, query: str) -> BaseResponse: ...
+    def get(self, query: str, **kwargs: Any) -> BaseResponse: ...
 
     @abstractmethod
-    def post(self, query: str, data: RequestData = None) -> BaseResponse: ...
+    def post(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> BaseResponse: ...
 
     @abstractmethod
-    def put(self, query: str, data: RequestData = None) -> BaseResponse: ...
+    def put(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> BaseResponse: ...
 
     @abstractmethod
-    def patch(self, query: str, data: RequestData = None) -> BaseResponse: ...
+    def patch(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> BaseResponse: ...
 
     @abstractmethod
-    def delete(self, query: str, data: RequestData = None) -> BaseNone: ...
+    def delete(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> BaseNone: ...
 
     @abstractmethod
     def execute(self, query: str, variables: RequestData = None) -> BaseDict: ...
@@ -141,7 +149,7 @@ class SyncClient(Client):
         with session.request(method, url, **kwargs) as resp:
             return resp
 
-    def get(self, query: str) -> RequestsResponse:
+    def get(self, query: str, **kwargs: Any) -> RequestsResponse:
         """Make a GET request to Github's REST API.
 
         Args:
@@ -150,9 +158,11 @@ class SyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return self.request("GET", query)
+        return self.request("GET", query, **kwargs)
 
-    def post(self, query: str, data: RequestData = None) -> RequestsResponse:
+    def post(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> RequestsResponse:
         """Make a POST request to Github's REST API.
 
         Args:
@@ -162,9 +172,11 @@ class SyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return self.request("POST", query, data=json.dumps(data))
+        return self.request("POST", query, data=json.dumps(data), **kwargs)
 
-    def put(self, query: str, data: RequestData = None) -> RequestsResponse:
+    def put(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> RequestsResponse:
         """Make a PUT request to Github's REST API.
 
         Args:
@@ -174,9 +186,11 @@ class SyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return self.request("PUT", query, data=json.dumps(data))
+        return self.request("PUT", query, data=json.dumps(data), **kwargs)
 
-    def patch(self, query: str, data: RequestData = None) -> RequestsResponse:
+    def patch(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> RequestsResponse:
         """Make a PATCH request to Github's REST API.
 
         Args:
@@ -186,16 +200,16 @@ class SyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return self.request("PATCH", query, data=json.dumps(data))
+        return self.request("PATCH", query, data=json.dumps(data), **kwargs)
 
-    def delete(self, query: str, data: RequestData = None) -> None:
+    def delete(self, query: str, data: RequestData = None, **kwargs: Any) -> None:
         """Make a DELETE request to Github's REST API.
 
         Args:
             query (str): The path segment of the request, e.g `/octocat`.
             data (Dict): The data to send in the request (optional).
         """
-        self.request("DELETE", query, data=json.dumps(data))
+        self.request("DELETE", query, data=json.dumps(data), **kwargs)
 
     def execute(self, query: str, variables: RequestData = None) -> dict[str, Any]:
         """Execute a query against Github's GraphQL endpoint.
@@ -283,7 +297,7 @@ class AsyncClient(Client):
         session = await self._get_aiohttp_session()
         return await session.request(method, url, **kwargs)
 
-    async def get(self, query: str) -> ClientResponse:
+    async def get(self, query: str, **kwargs: Any) -> ClientResponse:
         """Make a GET request to Github's REST API.
 
         Args:
@@ -292,9 +306,11 @@ class AsyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return await self.request("GET", query)
+        return await self.request("GET", query, **kwargs)
 
-    async def post(self, query: str, data: RequestData = None) -> ClientResponse:
+    async def post(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> ClientResponse:
         """Make a POST request to Github's REST API.
 
         Args:
@@ -304,9 +320,11 @@ class AsyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return await self.request("POST", query, data=json.dumps(data))
+        return await self.request("POST", query, data=json.dumps(data), **kwargs)
 
-    async def put(self, query: str, data: RequestData = None) -> ClientResponse:
+    async def put(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> ClientResponse:
         """Make a PUT request to Github's REST API.
 
         Args:
@@ -316,9 +334,11 @@ class AsyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return await self.request("PUT", query, data=json.dumps(data))
+        return await self.request("PUT", query, data=json.dumps(data), **kwargs)
 
-    async def patch(self, query: str, data: RequestData = None) -> ClientResponse:
+    async def patch(
+        self, query: str, data: RequestData = None, **kwargs: Any
+    ) -> ClientResponse:
         """Make a PATCH request to Github's REST API.
 
         Args:
@@ -328,16 +348,16 @@ class AsyncClient(Client):
         Returns:
             Dict: The JSON result of the request.
         """
-        return await self.request("PATCH", query, data=json.dumps(data))
+        return await self.request("PATCH", query, data=json.dumps(data), **kwargs)
 
-    async def delete(self, query: str, data: RequestData = None) -> None:
+    async def delete(self, query: str, data: RequestData = None, **kwargs: Any) -> None:
         """Make a DELETE request to Github's REST API.
 
         Args:
             query (str): The path segment of the request, e.g `/octocat`.
             data (Dict): The data to send in the request (optional).
         """
-        await self.request("DELETE", query, data=json.dumps(data))
+        await self.request("DELETE", query, data=json.dumps(data), **kwargs)
 
     async def execute(
         self, query: str, variables: RequestData = None
