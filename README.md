@@ -105,6 +105,34 @@ async with AppClient(app_id, privkey) as session:
     resp = await session.get("/octocat")
 ```
 
+### Obtain an app token for use with git
+
+Under the hood, the `AppClient` uses the `AppAuth` and `AppInstallationAuth`
+objects to obtain a GitHub token. It can also be used to pull or push from a
+repository.
+
+The token can be obtained as follows for a given installation of the app.
+
+```python
+app_auth = AppAuth(app_id, privkey)
+inst_auth = AppInstallationAuth(app_auth, owner, repositories=["simple-github"])
+return await inst_auth.get_token()
+```
+
+The `get_token` method doesn't natively support synchronous calls, but it can
+easily be called from synchronous code with
+
+```python
+return asyncio.run(inst_auth.get_token())
+```
+
+The returned token (`ghs_XXX`) can be used directly to authenticate git+http
+operations as the `git` user.
+
+```
+git remote set-url origin https://git:ghs_XXX@github.com/mozilla-releng/simple-github
+```
+
 ### No Authentication
 
 Finally you can create a client without any authentication. This is mainly
