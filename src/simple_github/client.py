@@ -248,7 +248,9 @@ class AsyncClient(Client):
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        transport = AIOHTTPTransport(url=GITHUB_GRAPHQL_ENDPOINT, headers=headers, ssl=True)
+        transport = AIOHTTPTransport(
+            url=GITHUB_GRAPHQL_ENDPOINT, headers=headers, ssl=True
+        )
         self._gql_client = GqlClient(
             transport=transport, fetch_schema_from_transport=False
         )
