@@ -1,7 +1,7 @@
 [project]
 name = "simple-github"
 description = "A simple Github client that only provides auth and access to the REST and GraphQL APIs."
-version = "2.1.0"
+version = "2.2.0"
 authors = [
   { name = "Mozilla Release Engineering", email =  "release+simple-github@mozilla.com"}
 ]
