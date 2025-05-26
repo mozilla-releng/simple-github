@@ -1,6 +1,6 @@
 import pytest
 
-from simple_github import AppClient, PublicClient, TokenClient
+from simple_github import AppClient, PublicClient, TokenClient, client_from_env
 from simple_github.client import GITHUB_API_ENDPOINT
 
 
@@ -63,3 +63,33 @@ async def test_app_installation_client(aioresponses, privkey):
         resp = await client.get("/octocat")
         result = await resp.json()
         assert result == {"foo": "bar"}
+
+
+@pytest.mark.parametrize(
+    "env,expected_client",
+    (
+        pytest.param(
+            {"GITHUB_TOKEN": "fake"},
+            TokenClient,
+            id="token",
+        ),
+        pytest.param(
+            {"GITHUB_APP_ID": "123", "GITHUB_APP_PRIVKEY": "fake"},
+            AppClient,
+            id="app",
+        ),
+        pytest.param(
+            {},
+            PublicClient,
+            id="public",
+        ),
+    ),
+)
+def test_client_from_env(monkeypatch, env, expected_client):
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+
+    client_func = client_from_env("owner", ["repo"])
+    if hasattr(client_func, "func"):
+        client_func = client_func.func
+    assert client_func == expected_client
