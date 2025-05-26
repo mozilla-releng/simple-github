@@ -1,3 +1,13 @@
+## 2.2.0 (2025-05-26)
+
+### Feat
+
+- add from_env client helper (#61)
+
+### Fix
+
+- ensure ssl verification happens with async client (#54)
+
 ## 2.1.0 (2024-09-17)
 
 ### Feat
