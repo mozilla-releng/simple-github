@@ -1,3 +1,9 @@
+## 2.2.1 (2025-05-30)
+
+### Fix
+
+- use python 3.8 compatible typing (#63)
+
 ## 2.2.0 (2025-05-26)
 
 ### Feat
