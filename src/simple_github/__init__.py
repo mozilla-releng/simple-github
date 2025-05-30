@@ -7,7 +7,7 @@ from .auth import AppAuth, AppInstallationAuth, PublicAuth, TokenAuth
 from .client import AsyncClient, Client, SyncClient
 
 
-def client_from_env(owner: str, repositories: list[str]):
+def client_from_env(owner: str, repositories: List[str]):
     if "GITHUB_TOKEN" in os.environ:
         return partial(TokenClient, os.environ["GITHUB_TOKEN"])
     elif "GITHUB_APP_ID" in os.environ and "GITHUB_APP_PRIVKEY" in os.environ:
