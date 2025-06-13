@@ -133,7 +133,16 @@ async def test_async_client_rest(aioresponses, async_client):
 
     aioresponses.delete(url, status=200)
     await client.delete("/octocat")
-    aioresponses.assert_called_with(url, "DELETE", data="null")
+    aioresponses.assert_called_with(
+        url,
+        "DELETE",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer abc",
+        },
+        data="null",
+        allow_redirects=True,
+    )
 
     aioresponses.get(url, status=401)
     with pytest.raises(ClientResponseError):
