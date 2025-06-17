@@ -1,7 +1,8 @@
 import asyncio
 import json
+import time
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Coroutine, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from aiohttp import ClientResponse, ClientSession
 from gql import Client as GqlClient
@@ -12,22 +13,19 @@ from gql.transport.requests import RequestsHTTPTransport
 from requests import Response as RequestsResponse
 from requests import Session
 
+from simple_github.util.rate_limit import get_wait_time, is_rate_limited
+from simple_github.util.types import BaseDict, BaseNone, BaseResponse, RequestData
+
 if TYPE_CHECKING:
     from simple_github.auth import Auth
 
 GITHUB_API_ENDPOINT = "https://api.github.com"
 GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 
-Response = Union[RequestsResponse, ClientResponse]
-RequestData = Optional[Dict[str, Any]]
-
-# Implementations of the base class can be either sync or async.
-BaseDict = Union[Dict[str, Any], Coroutine[None, None, Dict[str, Any]]]
-BaseNone = Union[None, Coroutine[None, None, None]]
-BaseResponse = Union[Response, Coroutine[None, None, Response]]
-
 
 class Client:
+    MAX_RETRIES = 5
+
     def __init__(self, auth: "Auth"):
         """A Github client.
 
@@ -137,8 +135,15 @@ class SyncClient(Client):
         url = f"{GITHUB_API_ENDPOINT}/{query.lstrip('/')}"
         session = self._get_requests_session()
 
-        with session.request(method, url, **kwargs) as resp:
-            return resp
+        attempt = 1
+        while True:
+            with session.request(method, url, **kwargs) as resp:
+                if attempt <= self.MAX_RETRIES and is_rate_limited(resp):
+                    time.sleep(get_wait_time(resp, attempt))
+                    attempt += 1
+                    continue
+
+                return resp
 
     def get(self, query: str) -> RequestsResponse:
         """Make a GET request to Github's REST API.
@@ -208,7 +213,16 @@ class SyncClient(Client):
             Dict: The result of the executed query.
         """
         session = self._get_gql_session()
-        return session.execute(gql(query), variable_values=variables)
+
+        attempt = 1
+        while True:
+            resp = session.execute(gql(query), variable_values=variables)
+            if attempt <= self.MAX_RETRIES and is_rate_limited(resp):
+                time.sleep(get_wait_time(resp, attempt))
+                attempt += 1
+                continue
+
+            return resp
 
 
 class AsyncClient(Client):
@@ -278,7 +292,15 @@ class AsyncClient(Client):
         """
         url = f"{GITHUB_API_ENDPOINT}/{query.lstrip('/')}"
         session = await self._get_aiohttp_session()
-        return await session.request(method, url, **kwargs)
+        attempt = 1
+        while True:
+            async with session.request(method, url, **kwargs) as resp:
+                if attempt <= self.MAX_RETRIES and is_rate_limited(resp):
+                    await asyncio.sleep(get_wait_time(resp, attempt))
+                    attempt += 1
+                    continue
+
+                return resp
 
     async def get(self, query: str) -> ClientResponse:
         """Make a GET request to Github's REST API.
@@ -350,4 +372,12 @@ class AsyncClient(Client):
             Dict: The result of the executed query.
         """
         session = await self._get_gql_session()
-        return await session.execute(gql(query), variable_values=variables)
+        attempt = 1
+        while True:
+            resp = await session.execute(gql(query), variable_values=variables)
+            if attempt <= self.MAX_RETRIES and is_rate_limited(resp):
+                await asyncio.sleep(get_wait_time(resp, attempt))
+                attempt += 1
+                continue
+
+            return resp
