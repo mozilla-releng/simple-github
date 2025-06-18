@@ -19,4 +19,4 @@ workers:
       provisioner: '{trust-domain}-t'
       implementation: docker-worker
       os: linux
-      worker-type: 't-{alias}-large-gcp'
+      worker-type: 't-{alias}-docker-noscratch'
