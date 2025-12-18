@@ -10,14 +10,15 @@ readme = "README.md"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
   "aiohttp[speedups]~=3.8",
   "gql[aiohttp,requests]>=3.5.1,<4",
@@ -40,6 +41,7 @@ dev-dependencies = [
   "sphinx-autobuild",
   "sphinx-book-theme~=1.0",
   "tox~=4.11",
+  "watchfiles>=1.1.0",
 ]
 
 [tool.commitizen]
