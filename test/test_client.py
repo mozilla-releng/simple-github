@@ -219,17 +219,41 @@ def test_sync_client_rest_with_text(responses, sync_client):
 @pytest.mark.asyncio
 async def test_async_client_graphql(aioresponses, async_client):
     client = async_client
+
     aioresponses.post(
-        GITHUB_GRAPHQL_ENDPOINT, status=200, payload={"data": {"foo": "bar"}}
+        GITHUB_GRAPHQL_ENDPOINT,
+        status=200,
+        payload={"data": {"foo": "bar"}},
     )
     query = "query { viewer { login }}"
     result = await client.execute(query)
     assert result == {"foo": "bar"}
 
+    aioresponses.post(
+        GITHUB_GRAPHQL_ENDPOINT,
+        status=200,
+        payload={"data": {"user": {"email": "octocat@github.com"}}},
+    )
+    query = "query($user:String!) { user(login: $user) { email }}"
+    variables = {"user": "octocat"}
+    result = await client.execute(query, variables)
+    assert result == {"user": {"email": "octocat@github.com"}}
+
 
 def test_sync_client_graphql(responses, sync_client):
     client = sync_client
+
     responses.post(GITHUB_GRAPHQL_ENDPOINT, status=200, json={"data": {"foo": "bar"}})
     query = "query { viewer { login }}"
     result = client.execute(query)
     assert result == {"foo": "bar"}
+
+    responses.post(
+        GITHUB_GRAPHQL_ENDPOINT,
+        status=200,
+        json={"data": {"user": {"email": "octocat@github.com"}}},
+    )
+    query = "query($user:String!) { user(login: $user) { email }}"
+    variables = {"user": "octocat"}
+    result = client.execute(query, variables)
+    assert result == {"user": {"email": "octocat@github.com"}}

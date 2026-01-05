@@ -21,7 +21,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
   "aiohttp[speedups]~=3.8",
-  "gql[aiohttp,requests]>=3.5.1,<5",
+  "gql[aiohttp,requests]>=4,<5",
   "pyjwt[crypto]~=2.8",
   "requests~=2.31",
 ]
