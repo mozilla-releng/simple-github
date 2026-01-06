@@ -208,7 +208,9 @@ class SyncClient(Client):
             Dict: The result of the executed query.
         """
         session = self._get_gql_session()
-        return session.execute(gql(query), variable_values=variables)
+        gql_query = gql(query)
+        gql_query.variable_values = variables
+        return session.execute(gql_query)
 
 
 class AsyncClient(Client):
@@ -350,4 +352,6 @@ class AsyncClient(Client):
             Dict: The result of the executed query.
         """
         session = await self._get_gql_session()
-        return await session.execute(gql(query), variable_values=variables)
+        gql_query = gql(query)
+        gql_query.variable_values = variables
+        return await session.execute(gql_query)
