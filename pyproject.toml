@@ -18,7 +18,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Topic :: Software Development",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "aiohttp[speedups]~=3.8",
   "gql[aiohttp,requests]>=4,<5",
@@ -72,7 +72,7 @@ select = [
 ignore = [
     "E501",  # let black handle line-length
 ]
-target-version = "py38"
+target-version = "py310"
 
 [tool.ruff.isort]
 known-first-party = ["simple_github"]

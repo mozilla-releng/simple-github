@@ -1,7 +1,8 @@
 import asyncio
 import json
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Coroutine, Dict, Optional, Union
+from collections.abc import Coroutine
+from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientResponse, ClientSession
 from gql import Client as GqlClient
@@ -18,13 +19,13 @@ if TYPE_CHECKING:
 GITHUB_API_ENDPOINT = "https://api.github.com"
 GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 
-Response = Union[RequestsResponse, ClientResponse]
-RequestData = Optional[Dict[str, Any]]
+Response = RequestsResponse | ClientResponse
+RequestData = dict[str, Any] | None
 
 # Implementations of the base class can be either sync or async.
-BaseDict = Union[Dict[str, Any], Coroutine[None, None, Dict[str, Any]]]
-BaseNone = Union[None, Coroutine[None, None, None]]
-BaseResponse = Union[Response, Coroutine[None, None, Response]]
+BaseDict = dict[str, Any] | Coroutine[None, None, dict[str, Any]]
+BaseNone = None | Coroutine[None, None, None]
+BaseResponse = Response | Coroutine[None, None, Response]
 
 
 class Client:
@@ -40,10 +41,10 @@ class Client:
         """
         self.auth = auth
         self._prev_token = None
-        self._gql_client: Optional[GqlClient] = None
-        self._gql_session: Optional[
-            Any[ReconnectingAsyncClientSession, SyncClientSession]
-        ] = None
+        self._gql_client: GqlClient | None = None
+        self._gql_session: (
+            Any[ReconnectingAsyncClientSession, SyncClientSession] | None
+        ) = None
 
     @abstractmethod
     def close(self) -> BaseNone: ...
@@ -196,7 +197,7 @@ class SyncClient(Client):
         """
         self.request("DELETE", query, data=json.dumps(data))
 
-    def execute(self, query: str, variables: RequestData = None) -> Dict[str, Any]:
+    def execute(self, query: str, variables: RequestData = None) -> dict[str, Any]:
         """Execute a query against Github's GraphQL endpoint.
 
         Args:
@@ -340,7 +341,7 @@ class AsyncClient(Client):
 
     async def execute(
         self, query: str, variables: RequestData = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a query against Github's GraphQL endpoint.
 
         Args:

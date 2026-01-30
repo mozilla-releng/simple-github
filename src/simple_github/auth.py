@@ -1,6 +1,7 @@
 import time
 from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator, AsyncIterator, List, Optional, Union
+from collections.abc import AsyncGenerator, AsyncIterator
+from typing import Any
 
 import jwt
 
@@ -105,7 +106,7 @@ class AppInstallationAuth(Auth):
         self,
         app: AppAuth,
         owner: str,
-        repositories: Optional[Union[List[str], str]] = None,
+        repositories: list[str] | str | None = None,
     ):
         """Authentication for a Github App installation.
 
