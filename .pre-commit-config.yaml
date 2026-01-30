@@ -25,7 +25,6 @@ repos:
     hooks:
       - id: rstcheck
         additional_dependencies:
-          - sphinx
           - tomli
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
