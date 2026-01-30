@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:56ff6d36d4eb3db13a741b342ec466f121480b5edded42e4b7ee850ce7a418ee
 LABEL maintainer="Mozilla Release Engineering <release@mozilla.com>"
 
 VOLUME /builds/worker/checkouts

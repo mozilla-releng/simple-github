@@ -1,4 +1,4 @@
-FROM debian:11
+FROM debian:11@sha256:8a08b2875ed17adc464ae03cf5f8652a41821fb8d3d2b17923f11e7489b146da
 
 ### Add worker user and setup its workspace.
 RUN mkdir /builds && \
