@@ -26,8 +26,8 @@ dependencies = [
   "requests~=2.31",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
   "aioresponses~=0.7",
   "coverage~=7.3",
   "pytest~=7.4",
