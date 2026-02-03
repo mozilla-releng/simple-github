@@ -28,16 +28,16 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "aioresponses~=0.7",
-  "coverage~=7.3",
-  "pytest~=7.4",
-  "pytest-aioresponses~=0.2",
-  "pytest-asyncio~=0.21",
-  "pytest-mock~=3.11",
-  "pytest-responses~=0.5",
-  "pyright~=1.1",
-  "responses~=0.23",
-  "tox~=4.11",
+  "aioresponses>=0.7",
+  "coverage>=7.3",
+  "pytest>=7.4",
+  "pytest-aioresponses>=0.2",
+  "pytest-asyncio>=0.21",
+  "pytest-mock>=3.11",
+  "pytest-responses>=0.5",
+  "pyright>=1.1",
+  "responses>=0.23",
+  "tox>=4.11",
   "watchfiles>=1.1.0",
 ]
 
