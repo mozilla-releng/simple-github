@@ -1533,16 +1533,16 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aioresponses", specifier = "~=0.7" },
-    { name = "coverage", specifier = "~=7.3" },
-    { name = "pyright", specifier = "~=1.1" },
-    { name = "pytest", specifier = "~=7.4" },
-    { name = "pytest-aioresponses", specifier = "~=0.2" },
-    { name = "pytest-asyncio", specifier = "~=0.21" },
-    { name = "pytest-mock", specifier = "~=3.11" },
-    { name = "pytest-responses", specifier = "~=0.5" },
-    { name = "responses", specifier = "~=0.23" },
-    { name = "tox", specifier = "~=4.11" },
+    { name = "aioresponses", specifier = ">=0.7" },
+    { name = "coverage", specifier = ">=7.3" },
+    { name = "pyright", specifier = ">=1.1" },
+    { name = "pytest", specifier = ">=7.4" },
+    { name = "pytest-aioresponses", specifier = ">=0.2" },
+    { name = "pytest-asyncio", specifier = ">=0.21" },
+    { name = "pytest-mock", specifier = ">=3.11" },
+    { name = "pytest-responses", specifier = ">=0.5" },
+    { name = "responses", specifier = ">=0.23" },
+    { name = "tox", specifier = ">=4.11" },
     { name = "watchfiles", specifier = ">=1.1.0" },
 ]
 
