@@ -1,13 +1,12 @@
 import asyncio
 import os
 from functools import partial
-from typing import List, Optional, Union
 
 from .auth import AppAuth, AppInstallationAuth, PublicAuth, TokenAuth
 from .client import AsyncClient, Client, SyncClient
 
 
-def client_from_env(owner: str, repositories: List[str]):
+def client_from_env(owner: str, repositories: list[str]):
     if "GITHUB_TOKEN" in os.environ:
         return partial(TokenClient, os.environ["GITHUB_TOKEN"])
     elif "GITHUB_APP_ID" in os.environ and "GITHUB_APP_PRIVKEY" in os.environ:
@@ -25,8 +24,8 @@ def client_from_env(owner: str, repositories: List[str]):
 def AppClient(
     id: int,
     privkey: str,
-    owner: Optional[str] = None,
-    repositories: Optional[Union[List[str], str]] = None,
+    owner: str | None = None,
+    repositories: list[str] | str | None = None,
 ) -> Client:
     """Convenience function to create a `Client` instance authenticated
     as a Github App.
@@ -41,7 +40,7 @@ def AppClient(
         owner (str): The org or user where the app is installed. If not
             specified, the returned client will be authenticated as the app
             itself rather than as an app installation.
-        repositories (List[str]): A list of repositories to limit the app's
+        repositories (list[str]): A list of repositories to limit the app's
             scope to. If not specified, the client will have access to all
             repositories owned by `owner`.
 
