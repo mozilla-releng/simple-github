@@ -28,7 +28,7 @@ async def test_app_auth_get_token(privkey, pubkey):
     token = await auth.get_token()
 
     payload = jwt.decode(token, pubkey, algorithms=["RS256"])
-    assert payload["iss"] == id
+    assert payload["iss"] == str(id)
     assert payload["exp"] == payload["iat"] + 540
 
     # Calling again yields the same token

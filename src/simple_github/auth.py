@@ -75,7 +75,7 @@ class AppAuth(Auth):
         payload = {
             "iat": issued_at,
             "exp": issued_at + 540,
-            "iss": self.id,
+            "iss": str(self.id),
         }
 
         token = jwt.encode(payload, self._privkey, algorithm="RS256")
