@@ -1341,7 +1341,7 @@ wheels = [
 
 [[package]]
 name = "simple-github"
-version = "2.2.1"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp", extra = ["speedups"] },
