@@ -1,3 +1,13 @@
+## 3.0.0 (2026-02-10)
+
+### Fix
+
+- Fixed compatibility with newer versions of pyJWT
+
+### Removed
+
+- Dropped compatibility for python < 3.10
+
 ## 2.2.1 (2025-05-30)
 
 ### Fix
