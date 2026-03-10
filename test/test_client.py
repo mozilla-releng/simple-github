@@ -204,6 +204,18 @@ def test_sync_client_rest(responses, sync_client):
         resp.raise_for_status()
 
 
+def test_sync_client_retries_on_5xx(responses, sync_client):
+    client = sync_client
+    url = f"{GITHUB_API_ENDPOINT}/octocat"
+
+    responses.get(url, status=502)
+    responses.get(url, status=200, json={"answer": 42})
+
+    resp = client.get("/octocat")
+    result = resp.json()
+    assert result == {"answer": 42}
+
+
 @pytest.mark.asyncio
 async def test_async_client_rest_with_text(aioresponses, async_client):
     client = async_client
