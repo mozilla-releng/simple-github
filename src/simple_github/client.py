@@ -5,6 +5,7 @@ from collections.abc import Coroutine
 from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientResponse, ClientSession
+from aiohttp_retry import ExponentialRetry, RetryClient
 from gql import Client as GqlClient
 from gql import gql
 from gql.client import ReconnectingAsyncClientSession, SyncClientSession
@@ -281,6 +282,13 @@ class AsyncClient(Client):
         assert session.transport.session
         return session.transport.session
 
+    async def _get_retry_client(self) -> RetryClient:
+        session = await self._get_aiohttp_session()
+        return RetryClient(
+            client_session=session,
+            retry_options=ExponentialRetry(attempts=5),
+        )
+
     async def request(self, method: str, query: str, **kwargs: Any) -> ClientResponse:
         """Make a request to Github's REST API.
 
@@ -294,8 +302,8 @@ class AsyncClient(Client):
             Dict: The JSON result of the request.
         """
         url = f"{GITHUB_API_ENDPOINT}/{query.lstrip('/')}"
-        session = await self._get_aiohttp_session()
-        return await session.request(method, url, **kwargs)
+        client = await self._get_retry_client()
+        return await client.request(method, url, **kwargs)
 
     async def get(self, query: str, **kwargs: Any) -> ClientResponse:
         """Make a GET request to Github's REST API.

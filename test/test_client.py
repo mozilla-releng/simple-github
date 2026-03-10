@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 import pytest_asyncio
 from aiohttp import ClientResponseError
@@ -142,12 +144,27 @@ async def test_async_client_rest(aioresponses, async_client):
         },
         data="null",
         allow_redirects=True,
+        # internal aiohttp-retry tracking data
+        trace_request_ctx=mock.ANY,
     )
 
     aioresponses.get(url, status=401)
     with pytest.raises(ClientResponseError):
         resp = await client.get("/octocat")
         resp.raise_for_status()
+
+
+@pytest.mark.asyncio
+async def test_async_client_retries_on_5xx(aioresponses, async_client):
+    client = async_client
+    url = f"{GITHUB_API_ENDPOINT}/octocat"
+
+    aioresponses.get(url, status=502)
+    aioresponses.get(url, status=200, payload={"answer": 42})
+
+    resp = await client.get("/octocat")
+    result = await resp.json()
+    assert result == {"answer": 42}
 
 
 def test_sync_client_rest(responses, sync_client):
