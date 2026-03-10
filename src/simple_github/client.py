@@ -13,6 +13,8 @@ from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.requests import RequestsHTTPTransport
 from requests import Response as RequestsResponse
 from requests import Session
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
     from simple_github.auth import Auth
@@ -132,6 +134,13 @@ class SyncClient(Client):
         assert session.transport.session
         return session.transport.session
 
+    def _get_retry_session(self) -> Session:
+        session = self._get_requests_session()
+        retry = Retry(total=5, backoff_factor=1, status_forcelist={500, 502, 503, 504})
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount("https://", adapter)
+        return session
+
     def request(self, method: str, query: str, **kwargs) -> RequestsResponse:
         """Make a request to Github's REST API.
 
@@ -145,7 +154,7 @@ class SyncClient(Client):
             Dict: The JSON result of the request.
         """
         url = f"{GITHUB_API_ENDPOINT}/{query.lstrip('/')}"
-        session = self._get_requests_session()
+        session = self._get_retry_session()
 
         with session.request(method, url, **kwargs) as resp:
             return resp
