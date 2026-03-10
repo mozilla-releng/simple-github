@@ -1,3 +1,11 @@
+## 3.1.0 (2026-03-10)
+
+### Feat
+
+- Requests towards the github API are now retried on 5xx
+- Forward kwargs to `request`. This allows passing headers/other params to the
+  underlying client
+
 ## 3.0.0 (2026-02-10)
 
 ### Fix
