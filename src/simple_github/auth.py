@@ -50,11 +50,12 @@ class TokenAuth(Auth):
 
 
 class AppAuth(Auth):
-    def __init__(self, app_id: int | str, privkey: str):
+    def __init__(self, app_id: str | int, privkey: str):
         """Authentication for a Github app.
 
         Args:
-            id (int or str): The Github app id.
+            app_id (str or int): The Github Client (str) or App (int) ID. GitHub
+                recommends using the Client ID.
             privkey (str): A base64 encoded private key associated with the
                 app.
         """
