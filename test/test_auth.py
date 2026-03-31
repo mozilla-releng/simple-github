@@ -22,13 +22,13 @@ async def test_token_auth_get_token():
 
 
 @pytest.mark.asyncio
-async def test_app_auth_get_token(privkey, pubkey):
-    id = 42
-    auth = AppAuth(id, privkey)
+@pytest.mark.parametrize("app_id", (42, "42"))
+async def test_app_auth_get_token(app_id: int | str, privkey: str, pubkey: str):
+    auth = AppAuth(app_id, privkey)
     token = await auth.get_token()
 
     payload = jwt.decode(token, pubkey, algorithms=["RS256"])
-    assert payload["iss"] == str(id)
+    assert payload["iss"] == str(app_id)
     assert payload["exp"] == payload["iat"] + 540
 
     # Calling again yields the same token
@@ -45,8 +45,10 @@ async def test_app_auth_get_token(privkey, pubkey):
 
 
 @pytest.mark.asyncio
-async def test_app_installation_auth_get_token(aioresponses, privkey):
-    app_id = 42
+@pytest.mark.parametrize("app_id", (42, "42"))
+async def test_app_installation_auth_get_token(
+    aioresponses, app_id: int | str, privkey: str
+):
     inst_id = 100
     owner = "mozilla"
     auth = AppInstallationAuth(app=AppAuth(app_id, privkey), owner=owner)
