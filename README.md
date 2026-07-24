@@ -95,6 +95,10 @@ async with AppClient(app_id, privkey, owner=owner, repositories=["simple-github"
     resp = await session.get("/octocat")
 ```
 
+The `AppClient` can be used in both sync and async contexts. If a running async
+loop is found, an object with `await`able method will be returned, otherwise a
+normal synchronous object with the same methods will be provided.
+
 ### Authenticate as a Github App
 
 You can also authenticate as the app itself. This is mainly only useful for
@@ -124,6 +128,12 @@ easily be called from synchronous code with
 
 ```python
 return asyncio.run(inst_auth.get_token())
+```
+
+For convenience, the `AppClient` provides a `get_token()` methods hiding those details.
+
+```python
+token = await AppClient(app_id, privkey, owner=owner, repositories=["simple-github"]).get_token()
 ```
 
 The returned token (`ghs_XXX`) can be used directly to authenticate git+http
