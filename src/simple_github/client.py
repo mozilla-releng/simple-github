@@ -94,6 +94,9 @@ class SyncClient(Client):
         if self._gql_client:
             self._gql_client.close_sync()
 
+    def get_token(self) -> str:
+        return asyncio.run(self.auth.get_token())
+
     def _get_gql_session(self) -> SyncClientSession:
         """Return an AIOHTTP session.
 
@@ -103,7 +106,7 @@ class SyncClient(Client):
         Returns:
             aiohttp.ClientSession: An AIOHTTP session object.
         """
-        token = asyncio.run(self.auth.get_token())
+        token = self.get_token()
 
         if token == self._prev_token:
             assert isinstance(self._gql_session, SyncClientSession)
@@ -250,6 +253,9 @@ class AsyncClient(Client):
         if self._gql_client:
             await self._gql_client.close_async()
 
+    async def get_token(self) -> str:
+        return await self.auth.get_token()
+
     async def _get_gql_session(self) -> ReconnectingAsyncClientSession:
         """Return an AIOHTTP session.
 
@@ -259,7 +265,7 @@ class AsyncClient(Client):
         Returns:
             aiohttp.ClientSession: An AIOHTTP session object.
         """
-        token = await self.auth.get_token()
+        token = await self.get_token()
         if token == self._prev_token:
             assert isinstance(self._gql_session, ReconnectingAsyncClientSession)
             return self._gql_session
