@@ -64,6 +64,23 @@ async def test_app_installation_client(aioresponses, privkey):
         result = await resp.json()
         assert result == {"foo": "bar"}
 
+@pytest.mark.asyncio
+async def test_app_installation_client_get_token(aioresponses, privkey):
+    owner = "owner"
+    inst_id = 1
+
+    aioresponses.get(
+        f"{GITHUB_API_ENDPOINT}/app/installations",
+        status=200,
+        payload=[{"id": inst_id, "account": {"login": owner}}],
+    )
+    aioresponses.post(
+        f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
+        status=200,
+        payload={"token": "789"},
+    )
+
+    assert await AppClient(id=123, privkey=privkey, owner=owner).get_token() == "789"
 
 @pytest.mark.parametrize(
     "env,expected_client",
