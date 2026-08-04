@@ -1,3 +1,15 @@
+## 3.2.0 (2026-08-04)
+
+### Feat
+
+- Provide convenience `get_token` method (#189)
+
+### Fix
+
+- Don't fail on missing `login` in app installation details (#197)
+- Stop declaring support for Python 3.9, which was dropped in 3.0 (#175)
+- app_id can be a str (#146)
+
 ## 3.1.0 (2026-03-10)
 
 ### Feat
