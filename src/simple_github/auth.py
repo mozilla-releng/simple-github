@@ -144,7 +144,7 @@ class AppInstallationAuth(Auth):
         assert isinstance(installations, list)
 
         for installation in installations:
-            if installation["account"]["login"] == self.owner:
+            if installation["account"].get("login") == self.owner:
                 return installation["id"]
 
         raise Exception(
