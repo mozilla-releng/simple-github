@@ -1,3 +1,4 @@
+import asyncio
 from unittest import mock
 
 import pytest
@@ -58,6 +59,17 @@ async def test_async_client_get_session(async_client):
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {client.auth._token}",
     }
+
+
+@pytest.mark.asyncio
+async def test_async_client_get_session_concurrent(async_client):
+    """Concurrent callers all get a session, none observe a partial setup."""
+    client = async_client
+
+    sessions = await asyncio.gather(*(client._get_aiohttp_session() for _ in range(25)))
+
+    assert isinstance(client._gql_session, ReconnectingAsyncClientSession)
+    assert all(s == sessions[0] for s in sessions)
 
 
 @pytest.mark.asyncio
