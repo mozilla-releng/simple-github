@@ -112,10 +112,14 @@ class SyncClient(Client):
             assert isinstance(self._gql_session, SyncClientSession)
             return self._gql_session
 
-        # Create a new session with updated token.
-        self._prev_token = token
-        if self._gql_client:
-            self._gql_client.close_sync()
+        # Drop the old session before building the new one, so a failure below
+        # leaves nothing cached and the next caller retries.
+        prev_client = self._gql_client
+        self._prev_token = None
+        self._gql_client = None
+        self._gql_session = None
+        if prev_client:
+            prev_client.close_sync()
 
         headers = {
             "Accept": "application/vnd.github+json",
@@ -124,12 +128,14 @@ class SyncClient(Client):
             headers["Authorization"] = f"Bearer {token}"
 
         transport = RequestsHTTPTransport(url=GITHUB_GRAPHQL_ENDPOINT, headers=headers)
-        self._gql_client = GqlClient(
-            transport=transport, fetch_schema_from_transport=False
-        )
-        self._gql_session = self._gql_client.connect_sync()
-        assert isinstance(self._gql_session, SyncClientSession)
-        return self._gql_session
+        client = GqlClient(transport=transport, fetch_schema_from_transport=False)
+        session = client.connect_sync()
+        assert isinstance(session, SyncClientSession)
+
+        self._gql_client = client
+        self._gql_session = session
+        self._prev_token = token
+        return session
 
     def _get_requests_session(self) -> Session:
         session = self._get_gql_session()
@@ -242,6 +248,10 @@ class SyncClient(Client):
 
 
 class AsyncClient(Client):
+    def __init__(self, auth: "Auth"):
+        super().__init__(auth)
+        self._session_lock = asyncio.Lock()
+
     async def __aenter__(self):
         return self
 
@@ -265,31 +275,41 @@ class AsyncClient(Client):
         Returns:
             aiohttp.ClientSession: An AIOHTTP session object.
         """
-        token = await self.get_token()
-        if token == self._prev_token:
-            assert isinstance(self._gql_session, ReconnectingAsyncClientSession)
-            return self._gql_session
+        # The lock spans `get_token()` because `AppInstallationAuth` drives an
+        # async generator, which two callers cannot advance at once.
+        async with self._session_lock:
+            token = await self.get_token()
 
-        # Create a new session with updated token.
-        self._prev_token = token
-        if self._gql_client:
-            await self._gql_client.close_async()
+            if token == self._prev_token:
+                assert isinstance(self._gql_session, ReconnectingAsyncClientSession)
+                return self._gql_session
 
-        headers = {
-            "Accept": "application/vnd.github+json",
-        }
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
+            # Drop the old session before building the new one, so a failure
+            # below leaves nothing cached and the next caller retries.
+            prev_client = self._gql_client
+            self._prev_token = None
+            self._gql_client = None
+            self._gql_session = None
+            if prev_client:
+                await prev_client.close_async()
 
-        transport = AIOHTTPTransport(
-            url=GITHUB_GRAPHQL_ENDPOINT, headers=headers, ssl=True
-        )
-        self._gql_client = GqlClient(
-            transport=transport, fetch_schema_from_transport=False
-        )
-        self._gql_session = await self._gql_client.connect_async(reconnecting=True)
-        assert isinstance(self._gql_session, ReconnectingAsyncClientSession)
-        return self._gql_session
+            headers = {
+                "Accept": "application/vnd.github+json",
+            }
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+
+            transport = AIOHTTPTransport(
+                url=GITHUB_GRAPHQL_ENDPOINT, headers=headers, ssl=True
+            )
+            client = GqlClient(transport=transport, fetch_schema_from_transport=False)
+            session = await client.connect_async(reconnecting=True)
+            assert isinstance(session, ReconnectingAsyncClientSession)
+
+            self._gql_client = client
+            self._gql_session = session
+            self._prev_token = token
+            return session
 
     async def _get_aiohttp_session(self) -> ClientSession:
         session = await self._get_gql_session()

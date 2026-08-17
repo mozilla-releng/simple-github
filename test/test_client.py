@@ -1,3 +1,4 @@
+import asyncio
 from unittest import mock
 
 import pytest
@@ -61,12 +62,43 @@ async def test_async_client_get_session(async_client):
 
 
 @pytest.mark.asyncio
+async def test_async_client_get_session_concurrent(async_client):
+    """Concurrent callers all get a session, none observe a partial setup."""
+    client = async_client
+
+    sessions = await asyncio.gather(*(client._get_aiohttp_session() for _ in range(25)))
+
+    assert isinstance(client._gql_session, ReconnectingAsyncClientSession)
+    assert all(s == sessions[0] for s in sessions)
+
+
+@pytest.mark.asyncio
 async def test_async_client_get_session_no_token(async_client):
     client = async_client
     client.auth._token = ""
     session = await client._get_aiohttp_session()
     assert dict(session._default_headers) == {
         "Accept": "application/vnd.github+json",
+    }
+
+
+@pytest.mark.asyncio
+async def test_async_client_recovers_from_connection_failure(async_client):
+    """A failed connect leaves nothing cached, so the next call retries."""
+    client = async_client
+
+    with mock.patch.object(
+        GqlClient, "connect_async", side_effect=OSError("no route to host")
+    ):
+        with pytest.raises(OSError):
+            await client._get_gql_session()
+
+    assert client._prev_token is None
+
+    session = await client._get_aiohttp_session()
+    assert dict(session._default_headers) == {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {client.auth._token}",
     }
 
 
@@ -105,6 +137,25 @@ def test_sync_client_get_session_no_token(sync_client):
     client._get_requests_session()
     assert dict(client._gql_session.transport.headers) == {
         "Accept": "application/vnd.github+json",
+    }
+
+
+def test_sync_client_recovers_from_connection_failure(sync_client):
+    """A failed connect leaves nothing cached, so the next call retries."""
+    client = sync_client
+
+    with mock.patch.object(
+        GqlClient, "connect_sync", side_effect=OSError("no route to host")
+    ):
+        with pytest.raises(OSError):
+            client._get_gql_session()
+
+    assert client._prev_token is None
+
+    client._get_requests_session()
+    assert dict(client._gql_session.transport.headers) == {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {client.auth._token}",
     }
 
 

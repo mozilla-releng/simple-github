@@ -1,3 +1,4 @@
+import asyncio
 import time
 from unittest import mock
 
@@ -5,7 +6,7 @@ import jwt
 import pytest
 
 from simple_github.auth import AppAuth, AppInstallationAuth, PublicAuth, TokenAuth
-from simple_github.client import GITHUB_API_ENDPOINT
+from simple_github.client import GITHUB_API_ENDPOINT, AsyncClient
 
 
 @pytest.mark.asyncio
@@ -83,3 +84,26 @@ async def test_app_installation_auth_get_token(
     with mock.patch.object(time, "time", return_value=cur + 3600 - 59):
         new_token = await auth.get_token()
         assert new_token != token
+
+
+@pytest.mark.asyncio
+async def test_concurrent_app_installation_auth(aioresponses, privkey: str):
+    """Concurrent callers must not advance the token generator at once."""
+    inst_id = 100
+    owner = "mozilla"
+
+    aioresponses.get(
+        f"{GITHUB_API_ENDPOINT}/app/installations",
+        status=200,
+        payload=[{"id": inst_id, "account": {"login": owner}}],
+    )
+    aioresponses.post(
+        f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
+        status=200,
+        payload={"token": "111"},
+    )
+    aioresponses.get(f"{GITHUB_API_ENDPOINT}/octocat", payload={}, repeat=True)
+
+    client = AsyncClient(auth=AppInstallationAuth(AppAuth(42, privkey), owner))
+    await asyncio.gather(*(client.get("/octocat") for _ in range(2)))
+    await client.close()
