@@ -112,10 +112,14 @@ class SyncClient(Client):
             assert isinstance(self._gql_session, SyncClientSession)
             return self._gql_session
 
-        # Create a new session with updated token.
-        self._prev_token = token
-        if self._gql_client:
-            self._gql_client.close_sync()
+        # Drop the old session before building the new one, so a failure below
+        # leaves nothing cached and the next caller retries.
+        prev_client = self._gql_client
+        self._prev_token = None
+        self._gql_client = None
+        self._gql_session = None
+        if prev_client:
+            prev_client.close_sync()
 
         headers = {
             "Accept": "application/vnd.github+json",
@@ -124,12 +128,14 @@ class SyncClient(Client):
             headers["Authorization"] = f"Bearer {token}"
 
         transport = RequestsHTTPTransport(url=GITHUB_GRAPHQL_ENDPOINT, headers=headers)
-        self._gql_client = GqlClient(
-            transport=transport, fetch_schema_from_transport=False
-        )
-        self._gql_session = self._gql_client.connect_sync()
-        assert isinstance(self._gql_session, SyncClientSession)
-        return self._gql_session
+        client = GqlClient(transport=transport, fetch_schema_from_transport=False)
+        session = client.connect_sync()
+        assert isinstance(session, SyncClientSession)
+
+        self._gql_client = client
+        self._gql_session = session
+        self._prev_token = token
+        return session
 
     def _get_requests_session(self) -> Session:
         session = self._get_gql_session()
