@@ -278,10 +278,14 @@ class AsyncClient(Client):
                 assert isinstance(self._gql_session, ReconnectingAsyncClientSession)
                 return self._gql_session
 
-            # Create a new session with updated token.
-            self._prev_token = token
-            if self._gql_client:
-                await self._gql_client.close_async()
+            # Drop the old session before building the new one, so a failure
+            # below leaves nothing cached and the next caller retries.
+            prev_client = self._gql_client
+            self._prev_token = None
+            self._gql_client = None
+            self._gql_session = None
+            if prev_client:
+                await prev_client.close_async()
 
             headers = {
                 "Accept": "application/vnd.github+json",
@@ -292,12 +296,14 @@ class AsyncClient(Client):
             transport = AIOHTTPTransport(
                 url=GITHUB_GRAPHQL_ENDPOINT, headers=headers, ssl=True
             )
-            self._gql_client = GqlClient(
-                transport=transport, fetch_schema_from_transport=False
-            )
-            self._gql_session = await self._gql_client.connect_async(reconnecting=True)
-            assert isinstance(self._gql_session, ReconnectingAsyncClientSession)
-            return self._gql_session
+            client = GqlClient(transport=transport, fetch_schema_from_transport=False)
+            session = await client.connect_async(reconnecting=True)
+            assert isinstance(session, ReconnectingAsyncClientSession)
+
+            self._gql_client = client
+            self._gql_session = session
+            self._prev_token = token
+            return session
 
     async def _get_aiohttp_session(self) -> ClientSession:
         session = await self._get_gql_session()

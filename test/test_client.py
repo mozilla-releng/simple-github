@@ -82,6 +82,26 @@ async def test_async_client_get_session_no_token(async_client):
     }
 
 
+@pytest.mark.asyncio
+async def test_async_client_recovers_from_connection_failure(async_client):
+    """A failed connect leaves nothing cached, so the next call retries."""
+    client = async_client
+
+    with mock.patch.object(
+        GqlClient, "connect_async", side_effect=OSError("no route to host")
+    ):
+        with pytest.raises(OSError):
+            await client._get_gql_session()
+
+    assert client._prev_token is None
+
+    session = await client._get_aiohttp_session()
+    assert dict(session._default_headers) == {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {client.auth._token}",
+    }
+
+
 def test_sync_client_get_session(sync_client):
     client = sync_client
     assert client._gql_client is None
