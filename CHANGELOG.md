@@ -1,3 +1,9 @@
+## 3.2.1 (2026-08-20)
+
+### Fix
+
+- Serialize session setup to avoid races between concurrent callers (#200)
+
 ## 3.2.0 (2026-08-04)
 
 ### Feat
