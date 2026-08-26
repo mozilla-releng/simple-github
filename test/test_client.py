@@ -279,6 +279,15 @@ def test_sync_client_rest(responses, sync_client):
 
 
 def assert_correct_request_headers(request: requests.Request):
+    # We want to retain the original request headers.
+    default_request_headers = requests.Session().headers
+    for hdr, val in default_request_headers.items():
+        if hdr.lower() in ["accept", "authorization"]:
+            continue
+        assert (
+            request.headers[hdr] == val
+        ), "Incorrectly inherited header from the original requests session"
+
     assert (
         request.headers["accept"] == "application/vnd.github+json"
     ), "Incorrect Accept in request to GitHub REST API"

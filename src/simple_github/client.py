@@ -14,7 +14,6 @@ from gql.transport.requests import RequestsHTTPTransport
 from requests import Response as RequestsResponse
 from requests import Session
 from requests.adapters import HTTPAdapter
-from requests.structures import CaseInsensitiveDict
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
@@ -145,9 +144,7 @@ class SyncClient(Client):
 
         # mozilla-releng/simple-github#202: work around graphql-python/gql#613.
         if session.transport.headers:
-            session.transport.session.headers = CaseInsensitiveDict(
-                session.transport.headers
-            )
+            session.transport.session.headers.update(session.transport.headers)
 
         return session.transport.session
 
