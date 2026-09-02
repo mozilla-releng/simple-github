@@ -1,3 +1,9 @@
+## 3.2.2 (2026-09-02)
+
+### Fix
+
+- Retain auth headers on the sync REST session (#203)
+
 ## 3.2.1 (2026-08-20)
 
 ### Fix
