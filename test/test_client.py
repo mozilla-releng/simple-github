@@ -3,6 +3,7 @@ from unittest import mock
 
 import pytest
 import pytest_asyncio
+import requests
 from aiohttp import ClientResponseError
 from gql import Client as GqlClient
 from gql.client import ReconnectingAsyncClientSession, SyncClientSession
@@ -168,21 +169,25 @@ async def test_async_client_rest(aioresponses, async_client):
     resp = await client.get("/octocat")
     result = await resp.json()
     assert result == {"answer": 42}
+    assert_correct_aiorequest_headers(aioresponses, url, "GET")
 
     aioresponses.post(url, status=200, payload={"answer": 42})
     resp = await client.post("/octocat", data={"foo": "bar"})
     result = await resp.json()
     assert result == {"answer": 42}
+    assert_correct_aiorequest_headers(aioresponses, url, "POST")
 
     aioresponses.put(url, status=200, payload={"answer": 42})
     resp = await client.put("/octocat", data={"foo": "bar"})
     result = await resp.json()
     assert result == {"answer": 42}
+    assert_correct_aiorequest_headers(aioresponses, url, "PUT")
 
     aioresponses.patch(url, status=200, payload={"answer": 42})
     resp = await client.patch("/octocat", data={"foo": "bar"})
     result = await resp.json()
     assert result == {"answer": 42}
+    assert_correct_aiorequest_headers(aioresponses, url, "PATCH")
 
     aioresponses.delete(url, status=200)
     await client.delete("/octocat")
@@ -198,11 +203,24 @@ async def test_async_client_rest(aioresponses, async_client):
         # internal aiohttp-retry tracking data
         trace_request_ctx=mock.ANY,
     )
+    assert_correct_aiorequest_headers(aioresponses, url, "DELETE")
 
     aioresponses.get(url, status=401)
     with pytest.raises(ClientResponseError):
         resp = await client.get("/octocat")
         resp.raise_for_status()
+
+
+def assert_correct_aiorequest_headers(aioresponses, url: str, method: str = "GET"):
+    aioresponses.assert_called_with(
+        url,
+        method=method,
+        args_to_match=["headers"],
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer abc",
+        },
+    )
 
 
 @pytest.mark.asyncio
@@ -222,37 +240,60 @@ def test_sync_client_rest(responses, sync_client):
     client = sync_client
     url = f"{GITHUB_API_ENDPOINT}/octocat"
 
-    responses.get(url, status=200, json={"answer": 42})
+    get_mock = responses.get(url, status=200, json={"answer": 42})
     resp = client.get("/octocat")
     result = resp.json()
     assert result == {"answer": 42}
+    assert_correct_request_headers(get_mock.calls[0].request)
 
-    responses.post(url, status=200, json={"answer": 42})
+    post_mock = responses.post(url, status=200, json={"answer": 42})
     resp = client.post("/octocat", data={"foo": "bar"})
     result = resp.json()
     assert result == {"answer": 42}
+    assert_correct_request_headers(post_mock.calls[0].request)
 
-    responses.put(url, status=200, json={"answer": 42})
+    put_mock = responses.put(url, status=200, json={"answer": 42})
     resp = client.put("/octocat", data={"foo": "bar"})
     result = resp.json()
     assert result == {"answer": 42}
+    assert_correct_request_headers(put_mock.calls[0].request)
 
-    responses.patch(url, status=200, json={"answer": 42})
+    patch_mock = responses.patch(url, status=200, json={"answer": 42})
     resp = client.patch("/octocat", data={"foo": "bar"})
     result = resp.json()
     assert result == {"answer": 42}
+    assert_correct_request_headers(patch_mock.calls[0].request)
 
-    responses.delete(url, status=200)
+    delete_mock = responses.delete(url, status=200)
     client.delete("/octocat")
     resp = responses.calls[-1].response
     assert resp.url == url
     assert resp.request.method == "DELETE"
     assert resp.status_code == 200
+    assert_correct_request_headers(delete_mock.calls[0].request)
 
     responses.get(url, status=401)
     with pytest.raises(HTTPError):
         resp = client.get("/octocat")
         resp.raise_for_status()
+
+
+def assert_correct_request_headers(request: requests.Request):
+    # We want to retain the original request headers.
+    default_request_headers = requests.Session().headers
+    for hdr, val in default_request_headers.items():
+        if hdr.lower() in ["accept", "authorization"]:
+            continue
+        assert (
+            request.headers[hdr] == val
+        ), "Incorrectly inherited header from the original requests session"
+
+    assert (
+        request.headers["accept"] == "application/vnd.github+json"
+    ), "Incorrect Accept in request to GitHub REST API"
+    assert (
+        request.headers["authorization"] == "Bearer abc"
+    ), "Incorrect Authorization in request to GitHub REST API"
 
 
 def test_sync_client_retries_on_5xx(responses, sync_client):

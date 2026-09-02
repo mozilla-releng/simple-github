@@ -141,6 +141,11 @@ class SyncClient(Client):
         session = self._get_gql_session()
         assert isinstance(session.transport, RequestsHTTPTransport)
         assert session.transport.session
+
+        # mozilla-releng/simple-github#202: work around graphql-python/gql#613.
+        if session.transport.headers:
+            session.transport.session.headers.update(session.transport.headers)
+
         return session.transport.session
 
     def _get_retry_session(self) -> Session:
