@@ -10,10 +10,18 @@ from gql import Client as GqlClient
 from gql import gql
 from gql.client import ReconnectingAsyncClientSession, SyncClientSession
 from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.exceptions import TransportQueryError
 from gql.transport.requests import RequestsHTTPTransport
 from requests import Response as RequestsResponse
 from requests import Session
 from requests.adapters import HTTPAdapter
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    retry_unless_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
@@ -308,7 +316,19 @@ class AsyncClient(Client):
                 url=GITHUB_GRAPHQL_ENDPOINT, headers=headers, ssl=True
             )
             client = GqlClient(transport=transport, fetch_schema_from_transport=False)
-            session = await client.connect_async(reconnecting=True)
+            # Same as gql's default `retry_execute`, but re-raise the original
+            # exception once retries are exhausted rather than wrapping it in
+            # `tenacity.RetryError` (the default since gql 4.4).
+            session = await client.connect_async(
+                reconnecting=True,
+                retry_execute=retry(
+                    retry=retry_if_exception_type(Exception)
+                    & retry_unless_exception_type(TransportQueryError),
+                    stop=stop_after_attempt(5),
+                    wait=wait_exponential(),
+                    reraise=True,
+                ),
+            )
             assert isinstance(session, ReconnectingAsyncClientSession)
 
             self._gql_client = client
