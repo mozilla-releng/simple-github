@@ -1829,6 +1829,7 @@ dependencies = [
     { name = "gql", extra = ["aiohttp", "requests"] },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "requests" },
+    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
@@ -1854,6 +1855,7 @@ requires-dist = [
     { name = "gql", extras = ["aiohttp", "requests"], specifier = ">=4,<5" },
     { name = "pyjwt", extras = ["crypto"], specifier = "~=2.8" },
     { name = "requests", specifier = "~=2.31" },
+    { name = "tenacity", specifier = "~=9.0" },
 ]
 
 [package.metadata.requires-dev]

@@ -7,6 +7,7 @@ import requests
 from aiohttp import ClientResponseError
 from gql import Client as GqlClient
 from gql.client import ReconnectingAsyncClientSession, SyncClientSession
+from gql.transport.exceptions import TransportServerError
 from requests.exceptions import HTTPError
 
 from simple_github.auth import TokenAuth
@@ -359,6 +360,18 @@ async def test_async_client_graphql(aioresponses, async_client):
     variables = {"user": "octocat"}
     result = await client.execute(query, variables)
     assert result == {"user": {"email": "octocat@github.com"}}
+
+
+@pytest.mark.asyncio
+async def test_async_client_graphql_server_error(aioresponses, async_client, mocker):
+    client = async_client
+    mocker.patch("asyncio.sleep", new=mock.AsyncMock())
+
+    aioresponses.post(GITHUB_GRAPHQL_ENDPOINT, status=500, repeat=True)
+    query = "query { viewer { login }}"
+    with pytest.raises(TransportServerError):
+        await client.execute(query)
+    assert sum(len(calls) for calls in aioresponses.requests.values()) == 5
 
 
 def test_sync_client_graphql(responses, sync_client):
