@@ -1,7 +1,9 @@
 import asyncio
+import os
 import time
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, AsyncIterator
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
@@ -191,4 +193,112 @@ class AppInstallationAuth(Auth):
             if self._token is None or self._expires - int(time.time()) < 60:
                 self._token = await self._create_token()
                 self._expires = int(time.time()) + 3600  # valid for one hour
+            return self._token
+
+
+class TaskclusterAuth(Auth):
+    # Tokens are refreshed this long before they expire.
+    _REFRESH_MARGIN = timedelta(minutes=5)
+
+    def __init__(
+        self,
+        app: str,
+        owner: str,
+        repositories: list[str] | str,
+        permissions: dict[str, str],
+        taskcluster_options: dict[str, Any] | None = None,
+    ):
+        """Authentication for a Github App installation, with tokens provided by
+        Taskcluster.
+
+        Args:
+            app (str): The name of the Github App, as registered in Taskcluster.
+            owner (str): The organization or user which owns the installation.
+            repositories (list[str] or str): Repository, or list of
+                repositories, to scope the token to. Must not be empty.
+            permissions (dict[str, str]): Github permissions to request, e.g.
+                `{"contents": "write"}`. Must not be empty.
+            taskcluster_options (dict): Options for the Taskcluster client, in
+                the format taskcluster clients accept (`rootUrl`, `credentials`,
+                etc). If not specified, they are read from the environment.
+                Inside a task with taskcluster-proxy enabled, requests go
+                through the proxy.
+
+        Raises:
+            ValueError: If `repositories` or `permissions` is empty.
+            ImportError: If `taskcluster` is not installed.
+        """
+        if isinstance(repositories, str):
+            repositories = [repositories]
+        if not repositories:
+            raise ValueError("'repositories' must not be empty")
+        if not permissions:
+            raise ValueError("'permissions' must not be empty")
+
+        # Imported lazily so the `taskcluster` extra stays optional.
+        try:
+            import taskcluster.aio  # noqa: PLC0415
+        except ImportError as e:
+            raise ImportError(
+                "TaskclusterAuth requires the taskcluster package. Install it "
+                "with `pip install simple-github[taskcluster]`."
+            ) from e
+
+        if taskcluster_options is None:
+            taskcluster_options = taskcluster.optionsFromEnvironment()
+            # Inside a task, credentials normally come from taskcluster-proxy,
+            # which `optionsFromEnvironment()` doesn't know about.
+            proxy_url = os.environ.get("TASKCLUSTER_PROXY_URL")
+            if proxy_url and "credentials" not in taskcluster_options:
+                taskcluster_options["rootUrl"] = proxy_url
+
+        self.app = app
+        self.owner = owner.lower()
+        self._taskcluster = taskcluster.aio.Auth(taskcluster_options)
+        self._payload = {
+            "repositories": [repo.lower() for repo in repositories],
+            "permissions": dict(permissions),
+        }
+        self._token: str | None = None
+        self._expires: datetime | None = None
+        # Serializes refresh so concurrent callers don't create duplicate tokens.
+        self._lock = asyncio.Lock()
+
+    async def get_token(self) -> str:
+        """Get the installation access token.
+
+        If the token is about to expire, it will automatically be re-generated.
+
+        Returns:
+            str: The installation access token.
+
+        Raises:
+            ValueError: If Taskcluster returns a malformed response.
+        """
+        async with self._lock:
+            if (
+                self._token is None
+                or self._expires is None
+                or datetime.now(timezone.utc) >= self._expires - self._REFRESH_MARGIN
+            ):
+                response: Any = await self._taskcluster.githubRepoToken(
+                    self.app, self.owner, self._payload
+                )
+
+                if (
+                    not isinstance(response, dict)
+                    or not isinstance(response.get("token"), str)
+                    or not isinstance(response.get("expires"), str)
+                ):
+                    raise ValueError(
+                        "Unexpected response from Taskcluster's githubRepoToken "
+                        "endpoint: expected 'token' and 'expires' strings"
+                    )
+                self._token = response["token"]
+                # Taskcluster returns a "Z" suffix, which Python 3.10's
+                # fromisoformat() doesn't accept.
+                self._expires = datetime.fromisoformat(
+                    response["expires"].replace("Z", "+00:00")
+                )
+            assert self._token is not None
             return self._token

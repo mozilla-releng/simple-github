@@ -2,8 +2,29 @@ import asyncio
 import os
 from functools import partial
 
-from .auth import AppAuth, AppInstallationAuth, PublicAuth, TokenAuth
+from .auth import (
+    AppAuth,
+    AppInstallationAuth,
+    PublicAuth,
+    TaskclusterAuth,
+    TokenAuth,
+)
 from .client import AsyncClient, Client, SyncClient
+
+__all__ = [
+    "AppAuth",
+    "AppClient",
+    "AppInstallationAuth",
+    "AsyncClient",
+    "Client",
+    "PublicAuth",
+    "PublicClient",
+    "SyncClient",
+    "TaskclusterAuth",
+    "TokenAuth",
+    "TokenClient",
+    "client_from_env",
+]
 
 
 def client_from_env(owner: str, repositories: list[str]):
