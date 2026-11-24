@@ -53,7 +53,7 @@ async def test_app_installation_client(aioresponses, privkey):
     aioresponses.post(
         f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
         status=200,
-        payload={"token": "789"},
+        payload={"token": "789", "expires_at": "2099-01-01T00:00:00Z"},
     )
     aioresponses.get(
         f"{GITHUB_API_ENDPOINT}/octocat", status=200, payload={"foo": "bar"}
@@ -78,7 +78,7 @@ async def test_app_installation_client_get_token(aioresponses, privkey):
     aioresponses.post(
         f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
         status=200,
-        payload={"token": "789"},
+        payload={"token": "789", "expires_at": "2099-01-01T00:00:00Z"},
     )
 
     assert await AppClient(id=123, privkey=privkey, owner=owner).get_token() == "789"

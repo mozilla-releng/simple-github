@@ -20,6 +20,12 @@ from simple_github.auth import (
 from simple_github.client import GITHUB_API_ENDPOINT, AsyncClient, SyncClient
 
 
+def _expires_in(**kwargs) -> str:
+    # Github and Taskcluster format timestamps with a "Z" suffix.
+    expires = datetime.now(timezone.utc) + timedelta(**kwargs)
+    return expires.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
 @pytest.mark.asyncio
 async def test_public_auth_get_token():
     auth = PublicAuth()
@@ -73,28 +79,48 @@ async def test_app_installation_auth_get_token(
     aioresponses.post(
         f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
         status=200,
-        payload={"token": "111"},
+        payload={"token": "111", "expires_at": _expires_in(hours=1)},
     )
     token = await auth.get_token()
     assert token == "111"
 
-    # Calling again yields the same token
+    # Calling again returns the cached token without creating a new one.
     assert await auth.get_token() == token
+    await auth.close()
 
-    # Unless it will expire in under a minute
-    aioresponses.post(
-        f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "seconds_left, expected",
+    [(120, "111"), (30, "222")],
+    ids=["outside-margin", "inside-margin"],
+)
+async def test_app_installation_auth_refreshes_near_expiry(
+    aioresponses, privkey: str, seconds_left: int, expected: str
+):
+    inst_id = 100
+    owner = "mozilla"
+    tokens_url = f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens"
+    aioresponses.get(
+        f"{GITHUB_API_ENDPOINT}/app/installations",
         status=200,
-        payload={"token": "222"},
+        payload=[{"id": inst_id, "account": {"login": owner}}],
     )
-    cur = int(time.time())
-    with mock.patch.object(time, "time", return_value=cur + 3600 - 61):
-        new_token = await auth.get_token()
-        assert new_token == token
+    aioresponses.post(
+        tokens_url,
+        status=200,
+        payload={"token": "111", "expires_at": _expires_in(seconds=seconds_left)},
+    )
+    aioresponses.post(
+        tokens_url,
+        status=200,
+        payload={"token": "222", "expires_at": _expires_in(hours=1)},
+    )
 
-    with mock.patch.object(time, "time", return_value=cur + 3600 - 59):
-        new_token = await auth.get_token()
-        assert new_token != token
+    auth = AppInstallationAuth(app=AppAuth(42, privkey), owner=owner)
+    assert await auth.get_token() == "111"
+    assert await auth.get_token() == expected
+    await auth.close()
 
 
 @pytest.mark.asyncio
@@ -111,7 +137,7 @@ async def test_concurrent_app_installation_auth(aioresponses, privkey: str):
     aioresponses.post(
         f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens",
         status=200,
-        payload={"token": "111"},
+        payload={"token": "111", "expires_at": _expires_in(hours=1)},
     )
     aioresponses.get(f"{GITHUB_API_ENDPOINT}/octocat", payload={}, repeat=True)
 
@@ -136,7 +162,11 @@ async def test_app_installation_auth_recovers_from_failure(
     aioresponses.get(installations_url, status=200, payload=installations)
     if failing == "access_tokens":
         aioresponses.post(tokens_url, status=403)
-    aioresponses.post(tokens_url, status=200, payload={"token": "111"})
+    aioresponses.post(
+        tokens_url,
+        status=200,
+        payload={"token": "111", "expires_at": _expires_in(hours=1)},
+    )
 
     auth = AppInstallationAuth(app=AppAuth(42, privkey), owner=owner)
     with pytest.raises(aiohttp.ClientResponseError):
@@ -144,12 +174,6 @@ async def test_app_installation_auth_recovers_from_failure(
 
     assert await auth.get_token() == "111"
     await auth.close()
-
-
-def _expires_in(**kwargs) -> str:
-    # Taskcluster formats timestamps with a "Z" suffix.
-    expires = datetime.now(timezone.utc) + timedelta(**kwargs)
-    return expires.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 @pytest.mark.asyncio
@@ -213,15 +237,15 @@ async def test_taskcluster_auth_concurrent_callers_mint_once(tc_client):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "minutes_left, expected_mints",
-    [(6, 1), (4, 2)],
+    "seconds_left, expected_mints",
+    [(120, 1), (30, 2)],
     ids=["outside-margin", "inside-margin"],
 )
 async def test_taskcluster_auth_refreshes_near_expiry(
-    tc_client, minutes_left, expected_mints
+    tc_client, seconds_left, expected_mints
 ):
     tc_client.githubRepoToken.side_effect = [
-        {"token": "first-token", "expires": _expires_in(minutes=minutes_left)},
+        {"token": "first-token", "expires": _expires_in(seconds=seconds_left)},
         {"token": "second-token", "expires": _expires_in(hours=1)},
     ]
     auth = TaskclusterAuth("app", "owner", ["repo"], {"contents": "read"})

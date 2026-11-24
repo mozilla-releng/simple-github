@@ -105,7 +105,59 @@ class AppAuth(Auth):
         return await anext(self._generator)
 
 
-class AppInstallationAuth(Auth):
+def _parse_timestamp(value: str) -> datetime:
+    """Parse an ISO 8601 timestamp from Github or Taskcluster."""
+    # Both use a "Z" suffix, which Python 3.10's fromisoformat() doesn't accept.
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+class CachedTokenAuth(Auth):
+    """Base class for authentication that uses short-lived tokens.
+
+    The token is cached until it is within `_REFRESH_MARGIN` of expiring, at
+    which point a new one is created. If creating a token fails, nothing is
+    cached and the next call tries again.
+
+    Subclasses must call `super().__init__()` and implement `_create_token()`.
+    """
+
+    # Tokens are refreshed this long before they expire.
+    _REFRESH_MARGIN = timedelta(minutes=1)
+
+    def __init__(self):
+        self._token: str | None = None
+        self._expires: datetime | None = None
+        # Serializes refresh so concurrent callers don't create duplicate tokens.
+        self._lock = asyncio.Lock()
+
+    @abstractmethod
+    async def _create_token(self) -> tuple[str, datetime]:
+        """Create a new token.
+
+        Returns:
+            tuple[str, datetime]: The token and its (timezone-aware) expiry.
+        """
+        ...
+
+    async def get_token(self) -> str:
+        """Get the token.
+
+        If the token is about to expire, it will automatically be re-generated.
+
+        Returns:
+            str: The token.
+        """
+        async with self._lock:
+            if (
+                self._token is None
+                or self._expires is None
+                or datetime.now(timezone.utc) >= self._expires - self._REFRESH_MARGIN
+            ):
+                self._token, self._expires = await self._create_token()
+            return self._token
+
+
+class AppInstallationAuth(CachedTokenAuth):
     def __init__(
         self,
         app: AppAuth,
@@ -122,6 +174,7 @@ class AppInstallationAuth(Auth):
                 specified, authentication will be granted for all repositories
                 owned by `owner`.
         """
+        super().__init__()
         if isinstance(repositories, str):
             repositories = [repositories]
 
@@ -130,10 +183,6 @@ class AppInstallationAuth(Auth):
         self.repositories = repositories
         self._client = AsyncClient(auth=self.app)
         self._installation_id: str | None = None
-        self._token: str | None = None
-        self._expires = 0
-        # Serializes refreshes so concurrent callers don't mint duplicate tokens.
-        self._lock = asyncio.Lock()
 
     async def close(self) -> None:
         """Close the Client used to fetch the installation token."""
@@ -158,12 +207,13 @@ class AppInstallationAuth(Auth):
             f"Github App '{self.app.id}' is not installed with owner '{self.owner}'!"
         )
 
-    async def _create_token(self) -> str:
+    async def _create_token(self) -> tuple[str, datetime]:
         """Create a Github App installation access token for the owner and
         repositories.
 
         Returns:
-            str: An app installation access token scoped to the repositories.
+            tuple[str, datetime]: An app installation access token scoped to
+                the repositories, and its expiry.
         """
         if self._installation_id is None:
             self._installation_id = await self._get_installation_id()
@@ -178,28 +228,10 @@ class AppInstallationAuth(Auth):
         response.raise_for_status()
         result = await response.json()
         assert isinstance(result, dict)
-        return result["token"]
-
-    async def get_token(self) -> str:
-        """Get the installation access token.
-
-        If the token is about to expire, it will automatically be re-generated.
-        If creating a token fails, the next call tries again.
-
-        Returns:
-            str: The installation access token."""
-        async with self._lock:
-            # Refresh the token a minute before it expires.
-            if self._token is None or self._expires - int(time.time()) < 60:
-                self._token = await self._create_token()
-                self._expires = int(time.time()) + 3600  # valid for one hour
-            return self._token
+        return result["token"], _parse_timestamp(result["expires_at"])
 
 
-class TaskclusterAuth(Auth):
-    # Tokens are refreshed this long before they expire.
-    _REFRESH_MARGIN = timedelta(minutes=5)
-
+class TaskclusterAuth(CachedTokenAuth):
     def __init__(
         self,
         app: str,
@@ -228,6 +260,7 @@ class TaskclusterAuth(Auth):
             ValueError: If `repositories` or `permissions` is empty.
             ImportError: If `taskcluster` is not installed.
         """
+        super().__init__()
         if isinstance(repositories, str):
             repositories = [repositories]
         if not repositories:
@@ -259,46 +292,27 @@ class TaskclusterAuth(Auth):
             "repositories": [repo.lower() for repo in repositories],
             "permissions": dict(permissions),
         }
-        self._token: str | None = None
-        self._expires: datetime | None = None
-        # Serializes refresh so concurrent callers don't create duplicate tokens.
-        self._lock = asyncio.Lock()
 
-    async def get_token(self) -> str:
-        """Get the installation access token.
-
-        If the token is about to expire, it will automatically be re-generated.
+    async def _create_token(self) -> tuple[str, datetime]:
+        """Request an installation access token from Taskcluster.
 
         Returns:
-            str: The installation access token.
+            tuple[str, datetime]: The installation access token and its expiry.
 
         Raises:
             ValueError: If Taskcluster returns a malformed response.
         """
-        async with self._lock:
-            if (
-                self._token is None
-                or self._expires is None
-                or datetime.now(timezone.utc) >= self._expires - self._REFRESH_MARGIN
-            ):
-                response: Any = await self._taskcluster.githubRepoToken(
-                    self.app, self.owner, self._payload
-                )
+        response: Any = await self._taskcluster.githubRepoToken(
+            self.app, self.owner, self._payload
+        )
 
-                if (
-                    not isinstance(response, dict)
-                    or not isinstance(response.get("token"), str)
-                    or not isinstance(response.get("expires"), str)
-                ):
-                    raise ValueError(
-                        "Unexpected response from Taskcluster's githubRepoToken "
-                        "endpoint: expected 'token' and 'expires' strings"
-                    )
-                self._token = response["token"]
-                # Taskcluster returns a "Z" suffix, which Python 3.10's
-                # fromisoformat() doesn't accept.
-                self._expires = datetime.fromisoformat(
-                    response["expires"].replace("Z", "+00:00")
-                )
-            assert self._token is not None
-            return self._token
+        if (
+            not isinstance(response, dict)
+            or not isinstance(response.get("token"), str)
+            or not isinstance(response.get("expires"), str)
+        ):
+            raise ValueError(
+                "Unexpected response from Taskcluster's githubRepoToken "
+                "endpoint: expected 'token' and 'expires' strings"
+            )
+        return response["token"], _parse_timestamp(response["expires"])
