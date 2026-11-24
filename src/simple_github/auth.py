@@ -1,3 +1,4 @@
+import asyncio
 import time
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, AsyncIterator
@@ -126,7 +127,11 @@ class AppInstallationAuth(Auth):
         self.owner = owner
         self.repositories = repositories
         self._client = AsyncClient(auth=self.app)
-        self._generator = self._gen_installation_token()
+        self._installation_id: str | None = None
+        self._token: str | None = None
+        self._expires = 0
+        # Serializes refreshes so concurrent callers don't mint duplicate tokens.
+        self._lock = asyncio.Lock()
 
     async def close(self) -> None:
         """Close the Client used to fetch the installation token."""
@@ -151,51 +156,39 @@ class AppInstallationAuth(Auth):
             f"Github App '{self.app.id}' is not installed with owner '{self.owner}'!"
         )
 
-    async def _gen_installation_token(self) -> AsyncGenerator[str, None]:
-        """Generates a Github App installation access token for the given owner
-        and repositories.
+    async def _create_token(self) -> str:
+        """Create a Github App installation access token for the owner and
+        repositories.
 
-        Subsequent iterations of this generator return the same token until it
-        expires, or is about to expire. After which, a new token is generated.
-
-        Args:
-            owner (str): The Github org or user where the app is installed.
-            repos (List[str]): A list of repositories under <owner> to restrict
-                access to. If not provided, the token will have access to all
-                repositories.
-
-        Yields:
-            str: An app installation access token scoped to the given repositories.
+        Returns:
+            str: An app installation access token scoped to the repositories.
         """
-        installation_id = await self._get_installation_id()
-        query = f"/app/installations/{installation_id}/access_tokens"
+        if self._installation_id is None:
+            self._installation_id = await self._get_installation_id()
+
+        query = f"/app/installations/{self._installation_id}/access_tokens"
         data = {}
         if self.repositories:
             # Ensures the token is only valid for the current repo.
             data["repositories"] = self.repositories
 
-        async def _gentoken() -> str:
-            response = await self._client.post(query, data=data)
-            response.raise_for_status()
-            result = await response.json()
-            assert isinstance(result, dict)
-            return result["token"]
-
-        token = await _gentoken()
-        exp = int(time.time()) + 3600  # tokens are valid for one hour
-        while True:
-            cur = int(time.time())
-            if exp - cur < 60:
-                # token is about to expire, refresh it
-                token = await _gentoken()
-                exp = int(time.time()) + 3600
-            yield token
+        response = await self._client.post(query, data=data)
+        response.raise_for_status()
+        result = await response.json()
+        assert isinstance(result, dict)
+        return result["token"]
 
     async def get_token(self) -> str:
         """Get the installation access token.
 
         If the token is about to expire, it will automatically be re-generated.
+        If creating a token fails, the next call tries again.
 
         Returns:
             str: The installation access token."""
-        return await anext(self._generator)
+        async with self._lock:
+            # Refresh the token a minute before it expires.
+            if self._token is None or self._expires - int(time.time()) < 60:
+                self._token = await self._create_token()
+                self._expires = int(time.time()) + 3600  # valid for one hour
+            return self._token

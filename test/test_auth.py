@@ -2,6 +2,7 @@ import asyncio
 import time
 from unittest import mock
 
+import aiohttp
 import jwt
 import pytest
 
@@ -107,3 +108,29 @@ async def test_concurrent_app_installation_auth(aioresponses, privkey: str):
     client = AsyncClient(auth=AppInstallationAuth(AppAuth(42, privkey), owner))
     await asyncio.gather(*(client.get("/octocat") for _ in range(2)))
     await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failing", ["installations", "access_tokens"])
+async def test_app_installation_auth_recovers_from_failure(
+    aioresponses, privkey: str, failing: str
+):
+    inst_id = 100
+    owner = "mozilla"
+    installations_url = f"{GITHUB_API_ENDPOINT}/app/installations"
+    tokens_url = f"{GITHUB_API_ENDPOINT}/app/installations/{inst_id}/access_tokens"
+    installations = [{"id": inst_id, "account": {"login": owner}}]
+
+    if failing == "installations":
+        aioresponses.get(installations_url, status=403)
+    aioresponses.get(installations_url, status=200, payload=installations)
+    if failing == "access_tokens":
+        aioresponses.post(tokens_url, status=403)
+    aioresponses.post(tokens_url, status=200, payload={"token": "111"})
+
+    auth = AppInstallationAuth(app=AppAuth(42, privkey), owner=owner)
+    with pytest.raises(aiohttp.ClientResponseError):
+        await auth.get_token()
+
+    assert await auth.get_token() == "111"
+    await auth.close()
