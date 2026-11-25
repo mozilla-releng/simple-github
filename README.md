@@ -204,3 +204,39 @@ contents = await session.execute(query)
 ```
 
 You can use GraphQL variables via the `variables` argument to `session.execute`.
+
+## Extras
+
+### Authenticate as a Github App through Taskcluster
+
+If your Github App is registered in Taskcluster, Taskcluster can mint the
+installation tokens for you, so the app's private key never needs to be
+available to your code. This requires the `taskcluster` extra:
+
+```bash
+pip install simple-github[taskcluster]
+```
+
+```python
+from simple_github import AsyncClient, TaskclusterAuth
+
+auth = TaskclusterAuth(
+    "my-github-app",
+    "mozilla-releng",
+    repositories=["simple-github"],
+    permissions={"contents": "read"},
+)
+async with AsyncClient(auth=auth) as session:
+    resp = await session.get("/octocat")
+```
+
+Tokens are minted on first use and refreshed shortly before they expire.
+`TaskclusterAuth` works with both `AsyncClient` and `SyncClient`.
+
+By default the Taskcluster client options are read from the environment.
+Inside a Taskcluster task with `taskcluster-proxy` enabled, requests go through
+the proxy, so no credentials are needed. Otherwise the standard
+`TASKCLUSTER_ROOT_URL`, `TASKCLUSTER_CLIENT_ID` and `TASKCLUSTER_ACCESS_TOKEN`
+variables are used. To use other credentials, pass a Taskcluster client options
+dict with `taskcluster_options=`, e.g.
+`{"rootUrl": ..., "credentials": {"clientId": ..., "accessToken": ...}}`.

@@ -1,9 +1,11 @@
 import inspect
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import aiohttp
 import pytest
+import taskcluster.aio
 from responses import RequestsMock
 
 here = Path(__file__).parent
@@ -55,3 +57,23 @@ def privkey(datadir):
 def pubkey(datadir):
     with open(datadir / "test_key.pub", "rb") as fh:
         return fh.read()
+
+
+@pytest.fixture
+def tc_client(monkeypatch):
+    """Replace the Taskcluster client that `TaskclusterAuth` builds with a mock.
+
+    By default `githubRepoToken` returns a token valid for an hour. The patched
+    constructor is available as `taskcluster.aio.Auth`.
+    """
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    client = MagicMock(
+        githubRepoToken=AsyncMock(
+            return_value={
+                "token": "installation-token",
+                "expires": expires.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            }
+        )
+    )
+    monkeypatch.setattr(taskcluster.aio, "Auth", MagicMock(return_value=client))
+    return client

@@ -1,6 +1,9 @@
+import asyncio
+import os
 import time
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, AsyncIterator
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
@@ -102,7 +105,59 @@ class AppAuth(Auth):
         return await anext(self._generator)
 
 
-class AppInstallationAuth(Auth):
+def _parse_timestamp(value: str) -> datetime:
+    """Parse an ISO 8601 timestamp from Github or Taskcluster."""
+    # Both use a "Z" suffix, which Python 3.10's fromisoformat() doesn't accept.
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+class CachedTokenAuth(Auth):
+    """Base class for authentication that uses short-lived tokens.
+
+    The token is cached until it is within `_REFRESH_MARGIN` of expiring, at
+    which point a new one is created. If creating a token fails, nothing is
+    cached and the next call tries again.
+
+    Subclasses must call `super().__init__()` and implement `_create_token()`.
+    """
+
+    # Tokens are refreshed this long before they expire.
+    _REFRESH_MARGIN = timedelta(minutes=1)
+
+    def __init__(self):
+        self._token: str | None = None
+        self._expires: datetime | None = None
+        # Serializes refresh so concurrent callers don't create duplicate tokens.
+        self._lock = asyncio.Lock()
+
+    @abstractmethod
+    async def _create_token(self) -> tuple[str, datetime]:
+        """Create a new token.
+
+        Returns:
+            tuple[str, datetime]: The token and its (timezone-aware) expiry.
+        """
+        ...
+
+    async def get_token(self) -> str:
+        """Get the token.
+
+        If the token is about to expire, it will automatically be re-generated.
+
+        Returns:
+            str: The token.
+        """
+        async with self._lock:
+            if (
+                self._token is None
+                or self._expires is None
+                or datetime.now(timezone.utc) >= self._expires - self._REFRESH_MARGIN
+            ):
+                self._token, self._expires = await self._create_token()
+            return self._token
+
+
+class AppInstallationAuth(CachedTokenAuth):
     def __init__(
         self,
         app: AppAuth,
@@ -119,6 +174,7 @@ class AppInstallationAuth(Auth):
                 specified, authentication will be granted for all repositories
                 owned by `owner`.
         """
+        super().__init__()
         if isinstance(repositories, str):
             repositories = [repositories]
 
@@ -126,7 +182,7 @@ class AppInstallationAuth(Auth):
         self.owner = owner
         self.repositories = repositories
         self._client = AsyncClient(auth=self.app)
-        self._generator = self._gen_installation_token()
+        self._installation_id: str | None = None
 
     async def close(self) -> None:
         """Close the Client used to fetch the installation token."""
@@ -151,51 +207,112 @@ class AppInstallationAuth(Auth):
             f"Github App '{self.app.id}' is not installed with owner '{self.owner}'!"
         )
 
-    async def _gen_installation_token(self) -> AsyncGenerator[str, None]:
-        """Generates a Github App installation access token for the given owner
-        and repositories.
+    async def _create_token(self) -> tuple[str, datetime]:
+        """Create a Github App installation access token for the owner and
+        repositories.
 
-        Subsequent iterations of this generator return the same token until it
-        expires, or is about to expire. After which, a new token is generated.
-
-        Args:
-            owner (str): The Github org or user where the app is installed.
-            repos (List[str]): A list of repositories under <owner> to restrict
-                access to. If not provided, the token will have access to all
-                repositories.
-
-        Yields:
-            str: An app installation access token scoped to the given repositories.
+        Returns:
+            tuple[str, datetime]: An app installation access token scoped to
+                the repositories, and its expiry.
         """
-        installation_id = await self._get_installation_id()
-        query = f"/app/installations/{installation_id}/access_tokens"
+        if self._installation_id is None:
+            self._installation_id = await self._get_installation_id()
+
+        query = f"/app/installations/{self._installation_id}/access_tokens"
         data = {}
         if self.repositories:
             # Ensures the token is only valid for the current repo.
             data["repositories"] = self.repositories
 
-        async def _gentoken() -> str:
-            response = await self._client.post(query, data=data)
-            response.raise_for_status()
-            result = await response.json()
-            assert isinstance(result, dict)
-            return result["token"]
+        response = await self._client.post(query, data=data)
+        response.raise_for_status()
+        result = await response.json()
+        assert isinstance(result, dict)
+        return result["token"], _parse_timestamp(result["expires_at"])
 
-        token = await _gentoken()
-        exp = int(time.time()) + 3600  # tokens are valid for one hour
-        while True:
-            cur = int(time.time())
-            if exp - cur < 60:
-                # token is about to expire, refresh it
-                token = await _gentoken()
-                exp = int(time.time()) + 3600
-            yield token
 
-    async def get_token(self) -> str:
-        """Get the installation access token.
+class TaskclusterAuth(CachedTokenAuth):
+    def __init__(
+        self,
+        app: str,
+        owner: str,
+        repositories: list[str] | str,
+        permissions: dict[str, str],
+        taskcluster_options: dict[str, Any] | None = None,
+    ):
+        """Authentication for a Github App installation, with tokens provided by
+        Taskcluster.
 
-        If the token is about to expire, it will automatically be re-generated.
+        Args:
+            app (str): The name of the Github App, as registered in Taskcluster.
+            owner (str): The organization or user which owns the installation.
+            repositories (list[str] or str): Repository, or list of
+                repositories, to scope the token to. Must not be empty.
+            permissions (dict[str, str]): Github permissions to request, e.g.
+                `{"contents": "write"}`. Must not be empty.
+            taskcluster_options (dict): Options for the Taskcluster client, in
+                the format taskcluster clients accept (`rootUrl`, `credentials`,
+                etc). If not specified, they are read from the environment.
+                Inside a task with taskcluster-proxy enabled, requests go
+                through the proxy.
+
+        Raises:
+            ValueError: If `repositories` or `permissions` is empty.
+            ImportError: If `taskcluster` is not installed.
+        """
+        super().__init__()
+        if isinstance(repositories, str):
+            repositories = [repositories]
+        if not repositories:
+            raise ValueError("'repositories' must not be empty")
+        if not permissions:
+            raise ValueError("'permissions' must not be empty")
+
+        # Imported lazily so the `taskcluster` extra stays optional.
+        try:
+            import taskcluster.aio  # noqa: PLC0415
+        except ImportError as e:
+            raise ImportError(
+                "TaskclusterAuth requires the taskcluster package. Install it "
+                "with `pip install simple-github[taskcluster]`."
+            ) from e
+
+        if taskcluster_options is None:
+            taskcluster_options = taskcluster.optionsFromEnvironment()
+            # Inside a task, credentials normally come from taskcluster-proxy,
+            # which `optionsFromEnvironment()` doesn't know about.
+            proxy_url = os.environ.get("TASKCLUSTER_PROXY_URL")
+            if proxy_url and "credentials" not in taskcluster_options:
+                taskcluster_options["rootUrl"] = proxy_url
+
+        self.app = app
+        self.owner = owner.lower()
+        self._taskcluster = taskcluster.aio.Auth(taskcluster_options)
+        self._payload = {
+            "repositories": [repo.lower() for repo in repositories],
+            "permissions": dict(permissions),
+        }
+
+    async def _create_token(self) -> tuple[str, datetime]:
+        """Request an installation access token from Taskcluster.
 
         Returns:
-            str: The installation access token."""
-        return await anext(self._generator)
+            tuple[str, datetime]: The installation access token and its expiry.
+
+        Raises:
+            ValueError: If Taskcluster returns a malformed response.
+        """
+        response: Any = await self._taskcluster.githubRepoToken(
+            self.app, self.owner, self._payload
+        )
+
+        if (
+            not isinstance(response, dict)
+            or not isinstance(response.get("token"), str)
+            or not isinstance(response.get("expires"), str)
+        ):
+            raise ValueError(
+                "Unexpected response from Taskcluster's githubRepoToken "
+                "endpoint: expected 'token' and 'expires' strings"
+            )
+        return response["token"], _parse_timestamp(response["expires"])

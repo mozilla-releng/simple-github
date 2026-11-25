@@ -288,8 +288,8 @@ class AsyncClient(Client):
         Returns:
             aiohttp.ClientSession: An AIOHTTP session object.
         """
-        # The lock spans `get_token()` because `AppInstallationAuth` drives an
-        # async generator, which two callers cannot advance at once.
+        # The lock spans `get_token()` so concurrent callers agree on the token
+        # and only one of them rebuilds the session when it changes.
         async with self._session_lock:
             token = await self.get_token()
 

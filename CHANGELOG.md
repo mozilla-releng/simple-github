@@ -1,3 +1,11 @@
+## Unreleased
+
+### Feat
+
+- Add `TaskclusterAuth`, which mints Github App installation tokens through
+  Taskcluster's `auth.githubRepoToken` endpoint. Requires the new `taskcluster`
+  extra.
+
 ## 3.2.2 (2026-09-02)
 
 ### Fix
